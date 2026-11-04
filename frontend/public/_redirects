@@ -10,3 +10,6 @@
 # UI elements
 /modals                 /dialogs             301
 /button-group           /buttons             301
+
+# SPA fallback — must be last
+/*                      /index.html          200

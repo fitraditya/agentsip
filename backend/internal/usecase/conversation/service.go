@@ -75,6 +75,10 @@ func (s *Service) Run(ctx context.Context, cfg RunConfig, io AudioIO) error {
 
 	state := &turnState{messages: []LLMMessage{{Role: "system", Content: cfg.SystemPrompt}}}
 
+	// Hardcoded greeting — plays once the call is answered, before the caller
+	// says anything. Long-term this should be configurable per-trunk.
+	go s.playGreeting(ctx, cfg, io, state)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -101,6 +105,79 @@ func (s *Service) Run(ctx context.Context, cfg RunConfig, io AudioIO) error {
 			}
 		}
 	}
+}
+
+// playGreeting speaks a fixed opening before the caller's first utterance,
+// so the caller hears something the moment the call is answered rather than
+// silence. Runs as a normal turn (system-prompted LLM) but with a fixed
+// instruction instead of the caller's transcript — the same LLM→TTS path as
+// any other turn, just triggered at answer time rather than on a final STT
+// event.
+func (s *Service) playGreeting(ctx context.Context, cfg RunConfig, io AudioIO, state *turnState) {
+	state.appendMessage(LLMMessage{Role: "user", Content: "Say the opening greeting for the call."})
+
+	turnCtx, cancel := context.WithCancel(ctx)
+	done := make(chan struct{})
+	state.mu.Lock()
+	state.cancel, state.done = cancel, done
+	state.mu.Unlock()
+
+	go func() {
+		defer close(done)
+		defer func() {
+			state.mu.Lock()
+			state.cancel, state.done = nil, nil
+			state.mu.Unlock()
+		}()
+
+		// The greeting itself is fixed text, not LLM-generated — synthesize it
+		// directly so we never depend on the LLM for the opening. The turn
+		// bookkeeping above reuses the same cancellation handle as startTurn
+		// so a barge-in during the greeting cancels it identically.
+		if err := s.speakFixedText(turnCtx, cfg, io, "Hi, I'm AgentSIP. How can I help you today?"); err != nil {
+			if turnCtx.Err() == nil {
+				s.log.Warn().Err(err).Msg("greeting failed")
+			}
+			return
+		}
+	}()
+}
+
+func (s *Service) speakFixedText(ctx context.Context, cfg RunConfig, io AudioIO, text string) error {
+	ttsSess, err := s.tts.StartSession(ctx, cfg.TTS)
+	if err != nil {
+		return fmt.Errorf("conversation: start tts for greeting: %w", err)
+	}
+	defer ttsSess.Close()
+
+	audioDone := make(chan struct{})
+	go func() {
+		defer close(audioDone)
+		for {
+			select {
+			case frame, ok := <-ttsSess.Audio():
+				if !ok {
+					return
+				}
+				select {
+				case io.Out() <- frame:
+				case <-ctx.Done():
+					return
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	if err := ttsSess.SendText(text, false); err != nil {
+		return fmt.Errorf("conversation: tts send greeting: %w", err)
+	}
+	if err := ttsSess.SendText("", true); err != nil {
+		return fmt.Errorf("conversation: tts flush greeting: %w", err)
+	}
+	<-audioDone
+	return nil
 }
 
 // turnState holds the running conversation history and the handle needed to

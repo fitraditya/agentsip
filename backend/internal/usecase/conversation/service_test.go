@@ -125,8 +125,10 @@ func TestRun_BasicTurn(t *testing.T) {
 	stt := &fakeSTT{events: make(chan conversation.TranscriptEvent, 4)}
 	tts := &fakeTTS{}
 	llm := &fakeLLM{handler: func(ctx context.Context, cfg conversation.LLMConfig, messages []conversation.LLMMessage, tools []conversation.ToolSpec) (<-chan conversation.LLMDelta, error) {
-		if len(messages) < 2 || messages[1].Content != "hello" {
-			t.Errorf("expected user message 'hello', got %+v", messages)
+		// The greeting turn prepends a user message; the scripted turn has
+		// "hello" as its latest user message (index 2).
+		if len(messages) < 3 || messages[2].Content != "hello" {
+			t.Errorf("expected user message 'hello' at index 2, got %+v", messages)
 		}
 		return deltaChan(
 			conversation.LLMDelta{ContentDelta: "Hi"},
@@ -141,12 +143,32 @@ func TestRun_BasicTurn(t *testing.T) {
 	runDone := make(chan error, 1)
 	go func() { runDone <- svc.Run(t.Context(), conversation.RunConfig{SystemPrompt: "be helpful"}, io) }()
 
-	stt.events <- conversation.TranscriptEvent{Text: "hello", Final: true}
-
+	// Wait for the greeting turn to finish before sending the scripted
+	// transcript — playGreeting fires on Run, racing with the test otherwise.
 	deadline := time.After(2 * time.Second)
 	for {
+		found := false
+		for _, s := range tts.textLog() {
+			if s == "Hi, I'm AgentSIP. How can I help you today?" {
+				found = true
+			}
+		}
+		if found {
+			break
+		}
+		select {
+		case <-deadline:
+			t.Fatal("greeting never sent")
+		case <-time.After(10 * time.Millisecond):
+		}
+	}
+
+	stt.events <- conversation.TranscriptEvent{Text: "hello", Final: true}
+
+	deadline = time.After(2 * time.Second)
+	for {
 		log := tts.textLog()
-		if len(log) >= 3 && log[len(log)-1] == "" {
+		if len(log) >= 5 && log[len(log)-1] == "" {
 			break
 		}
 		select {
@@ -157,7 +179,7 @@ func TestRun_BasicTurn(t *testing.T) {
 	}
 
 	got := tts.textLog()
-	want := []string{"Hi", " there", ""}
+	want := []string{"Hi, I'm AgentSIP. How can I help you today?", "", "Hi", " there", ""}
 	if len(got) != len(want) {
 		t.Fatalf("tts text log = %v, want %v", got, want)
 	}

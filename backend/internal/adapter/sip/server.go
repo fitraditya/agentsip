@@ -130,6 +130,7 @@ func NewServer(cfg Config, trunkSvc trunk.Service, callSvc call.Service, convoSv
 	srv.OnInvite(s.handleInvite)
 	srv.OnAck(s.handleAck)
 	srv.OnBye(s.handleBye)
+	srv.OnOptions(s.handleOptions)
 
 	return s, nil
 }
@@ -166,7 +167,12 @@ func (s *Server) handleInvite(req *sip.Request, tx sip.ServerTransaction) {
 		sourceIP = req.Source()
 	}
 
-	t, err := s.trunkSvc.ResolveInbound(ctx, trunk.InboundMatch{SourceIP: sourceIP})
+	digestUser := ""
+	if from := req.From(); from != nil {
+		digestUser = from.Address.User
+	}
+
+	t, err := s.trunkSvc.ResolveInbound(ctx, trunk.InboundMatch{SourceIP: sourceIP, DigestUsername: digestUser})
 	if err != nil {
 		log.Warn().Str("source_ip", sourceIP).Err(err).Msg("no trunk matched inbound call")
 		_ = dlg.Respond(sip.StatusForbidden, "Forbidden", nil)
@@ -389,4 +395,8 @@ func (s *Server) handleBye(req *sip.Request, tx sip.ServerTransaction) {
 	if err := s.dialogSrv.ReadBye(req, tx); err != nil {
 		s.log.Warn().Str("sip_call_id", req.CallID().Value()).Err(err).Msg("read bye")
 	}
+}
+
+func (s *Server) handleOptions(req *sip.Request, tx sip.ServerTransaction) {
+	_ = tx.Respond(sip.NewResponseFromRequest(req, sip.StatusOK, "OK", nil))
 }

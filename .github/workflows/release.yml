@@ -38,21 +38,29 @@ jobs:
           fi
 
       - name: Build backend binaries
+        working-directory: backend
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          mkdir -p dist
+          mkdir -p ../dist
           for GOOS in linux darwin; do
             for GOARCH in amd64 arm64; do
               echo "Building engine ${GOOS}/${GOARCH}..."
               CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -trimpath \
                 -ldflags "-s -w -X main.buildVersion=${VERSION}" \
-                -o "dist/agentsip-${VERSION}-${GOOS}-${GOARCH}/engine" ./backend/cmd/engine
-              cp -r backend/db/migrations "dist/agentsip-${VERSION}-${GOOS}-${GOARCH}/"
-              cp -r backend/db/migrations_vectorstore "dist/agentsip-${VERSION}-${GOOS}-${GOARCH}/"
-              tar -czf "dist/agentsip-${VERSION}-${GOOS}-${GOARCH}.tar.gz" -C dist "agentsip-${VERSION}-${GOOS}-${GOARCH}"
-              rm -rf "dist/agentsip-${VERSION}-${GOOS}-${GOARCH}"
+                -o "../dist/agentsip-${VERSION}-${GOOS}-${GOARCH}/engine" ./cmd/engine
             done
+          done
+
+      - name: Package artifacts
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          for dir in dist/agentsip-${VERSION}-*; do
+            cp -r backend/db/migrations "$dir/"
+            cp -r backend/db/migrations_vectorstore "$dir/"
+            tar -czf "${dir}.tar.gz" -C dist "$(basename "$dir")"
+            rm -rf "$dir"
           done
           cd dist && sha256sum *.tar.gz > SHA256SUMS && cat SHA256SUMS
 

@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	pgvectorpgx "github.com/pgvector/pgvector-go/pgx"
 
+	"github.com/fitraditya/agentsip/db"
 	embedderopenaicompat "github.com/fitraditya/agentsip/internal/adapter/embedder/openaicompat"
 	adapterhttp "github.com/fitraditya/agentsip/internal/adapter/http"
 	llmopenaicompat "github.com/fitraditya/agentsip/internal/adapter/llm/openaicompat"
@@ -31,6 +32,7 @@ import (
 	"github.com/fitraditya/agentsip/internal/config"
 	"github.com/fitraditya/agentsip/internal/pkg/crypto"
 	"github.com/fitraditya/agentsip/internal/pkg/logging"
+
 	"github.com/fitraditya/agentsip/internal/usecase/auth"
 	"github.com/fitraditya/agentsip/internal/usecase/call"
 	"github.com/fitraditya/agentsip/internal/usecase/conversation"
@@ -42,9 +44,41 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "migrate" {
+		if err := runMigrate(os.Args[2:]); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
 	if err := run(); err != nil {
 		logging.For("agentsip", "engine").Fatal().Err(err).Msg("fatal")
 	}
+}
+
+func runMigrate(args []string) error {
+	dir := "up"
+	vectorstore := false
+	for _, a := range args {
+		switch a {
+		case "up", "down":
+			dir = a
+		case "--vectorstore", "-vectorstore":
+			vectorstore = true
+		case "--help", "-h":
+			fmt.Println("Usage: engine migrate [up|down] [--vectorstore]")
+			return nil
+		}
+	}
+	cfg, err := config.Load()
+	if err != nil {
+		return fmt.Errorf("load config: %w", err)
+	}
+	dsn := cfg.DatabaseURL
+	if vectorstore {
+		dsn = cfg.VectorStoreDSN()
+	}
+	return db.Migrate(dsn, vectorstore, dir)
 }
 
 func run() error {

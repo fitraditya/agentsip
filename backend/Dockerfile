@@ -10,10 +10,9 @@
 #      rewrite. On a bridge the engine advertises an address nothing can
 #      reach — the symptom is calls that connect with no audio, not an error
 #      anybody notices.
-#   2. **Migrations are not applied by this binary.** They travel with the
-#      image (copied in below) but an operator runs them explicitly via the
-#      golang-migrate CLI — see Makefile's migrate-up/migrate-vectorstore-up
-#      targets — before starting a container against a fresh database.
+#   2. **Migrations run via `agentsip migrate up`** (SQL is embedded in the
+#      binary via go:embed, so no separate migration files are shipped).
+#      Run once before first start: docker run --rm --network host --env-file .env agentsip:local migrate up
 #
 # Build:
 #   docker build --build-arg VERSION="$(git describe --tags --always --dirty 2>/dev/null || echo dev)" -t agentsip:local .
@@ -35,7 +34,7 @@ ARG VERSION=dev
 # unlike obrelin's Opus encoder) — a static binary needing no libc.
 RUN CGO_ENABLED=0 go build -trimpath \
     -ldflags "-s -w -X main.buildVersion=${VERSION}" \
-    -o /out/engine ./cmd/engine
+    -o /out/agentsip ./cmd/engine
 
 FROM alpine:3.22
 # ca-certificates for TLS to ElevenLabs/the LLM endpoint/webhook receivers;
@@ -43,11 +42,7 @@ FROM alpine:3.22
 # people reading them.
 RUN apk add --no-cache ca-certificates tzdata \
  && adduser -D -u 10001 agentsip
-COPY --from=build /out/engine /usr/local/bin/engine
-# The migrations travel with the binary that expects them — an operator who
-# has the container has what they need to apply them.
-COPY --from=build /src/db/migrations /opt/agentsip/migrations
-COPY --from=build /src/db/migrations_vectorstore /opt/agentsip/migrations_vectorstore
+COPY --from=build /out/agentsip /usr/local/bin/agentsip
 
 # Non-root. Nothing here binds a privileged port: SIP's 5060 and the admin
 # API are both above 1024, and with host networking the container uses the
@@ -61,4 +56,4 @@ EXPOSE 5060/udp 8080/tcp
 
 # No shell form: the binary is PID 1 and must receive SIGTERM directly, or
 # in-flight calls are dropped without the chance to finish.
-ENTRYPOINT ["/usr/local/bin/engine"]
+ENTRYPOINT ["/usr/local/bin/agentsip"]

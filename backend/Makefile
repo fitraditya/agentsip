@@ -1,10 +1,10 @@
 .PHONY: build run test lint docker deps deps-down migrate-up migrate-down migrate-vectorstore-up migrate-vectorstore-down
 
 build:
-	go build -o bin/engine ./cmd/engine
+	go build -o bin/agentsip ./cmd/engine
 
 run: build
-	./bin/engine
+	./bin/agentsip
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 

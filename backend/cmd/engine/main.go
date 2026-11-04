@@ -25,7 +25,9 @@ import (
 	"github.com/fitraditya/agentsip/internal/adapter/mail"
 	"github.com/fitraditya/agentsip/internal/adapter/repository/postgres"
 	adaptersip "github.com/fitraditya/agentsip/internal/adapter/sip"
+	"github.com/fitraditya/agentsip/internal/adapter/stt"
 	sttelevenlabs "github.com/fitraditya/agentsip/internal/adapter/stt/elevenlabs"
+	sttmuse "github.com/fitraditya/agentsip/internal/adapter/stt/muse"
 	ttselevenlabs "github.com/fitraditya/agentsip/internal/adapter/tts/elevenlabs"
 	vectorstorepgvector "github.com/fitraditya/agentsip/internal/adapter/vectorstore/pgvector"
 	"github.com/fitraditya/agentsip/internal/config"
@@ -162,7 +164,7 @@ func run() error {
 	// is exactly one provider per port for v1 (ElevenLabs STT/TTS, any
 	// OpenAI-compatible LLM).
 	convoSvc := conversation.NewService(
-		sttelevenlabs.New(),
+		stt.NewRouter(sttelevenlabs.New(), sttmuse.New()),
 		ttselevenlabs.New(),
 		llmopenaicompat.New(),
 		kbSvc,

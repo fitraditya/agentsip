@@ -9,6 +9,8 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+
+	"github.com/fitraditya/agentsip/internal/domain"
 )
 
 // AudioIO is the narrow interface the SIP/media adapter implements per call.
@@ -35,8 +37,9 @@ type TranscriptEvent struct {
 }
 
 type STTSessionConfig struct {
-	APIKey string
-	Model  string
+	Provider ProviderKind
+	APIKey   string
+	Model    string
 }
 
 type STTSession interface {

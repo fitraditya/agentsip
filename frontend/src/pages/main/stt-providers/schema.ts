@@ -1,13 +1,12 @@
 import type { ProviderKind, SttProvider, SttProviderRequest } from "@/lib/api";
 import { z } from "zod";
 
-/** STT only supports ElevenLabs today — the type allows the full
- * `ProviderKind` union, but the UI only ever offers this one choice. */
 export const sttProviderOptions: { value: ProviderKind; label: string }[] = [
   { value: "elevenlabs", label: "ElevenLabs" },
+  { value: "muse", label: "Muse" },
 ];
 
-const providerEnum = z.enum(["elevenlabs"]);
+const providerEnum = z.enum(["elevenlabs", "muse"]);
 
 export const sttProviderFormSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
@@ -33,10 +32,7 @@ export function sttProviderToFormDefaults(
 ): SttProviderFormData {
   return {
     name: provider.name,
-    // The backend's ProviderKind is wider than this form's single-option
-    // enum; narrowed here since "elevenlabs" is the only value the UI ever
-    // writes back.
-    provider: provider.provider as "elevenlabs",
+    provider: provider.provider as "elevenlabs" | "muse",
     api_key: "",
     model: provider.model,
   };

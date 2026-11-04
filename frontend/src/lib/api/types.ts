@@ -11,7 +11,7 @@
 // ---------------------------------------------------------------------------
 
 /** `domain.ProviderKind` */
-export type ProviderKind = "elevenlabs" | "openai_compatible" | "pgvector";
+export type ProviderKind = "elevenlabs" | "muse" | "openai_compatible" | "pgvector";
 
 /** `domain.AnswerMode` */
 export type AnswerMode = "auto" | "webhook";

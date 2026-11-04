@@ -262,7 +262,7 @@ func (s *Server) handleInvite(req *sip.Request, tx sip.ServerTransaction) {
 
 	runCfg := conversation.RunConfig{
 		SystemPrompt:     t.SystemPrompt,
-		STT:              conversation.STTSessionConfig{APIKey: t.STT.APIKey, Model: t.STT.Model},
+		STT:              conversation.STTSessionConfig{Provider: t.STT.Provider, APIKey: t.STT.APIKey, Model: t.STT.Model},
 		TTS:              conversation.TTSSessionConfig{APIKey: t.TTS.APIKey, Model: t.TTS.Model, VoiceID: t.TTS.VoiceID},
 		LLM:              conversation.LLMConfig{BaseURL: t.LLM.BaseURL, APIKey: t.LLM.APIKey, Model: t.LLM.Model},
 		KnowledgeBaseIDs: t.KnowledgeBaseIDs,

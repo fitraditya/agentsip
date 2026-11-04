@@ -28,6 +28,7 @@ type ProviderKind string
 
 const (
 	ProviderElevenLabs   ProviderKind = "elevenlabs"
+	ProviderMuse         ProviderKind = "muse"
 	ProviderOpenAICompat ProviderKind = "openai_compatible"
 	ProviderPGVector     ProviderKind = "pgvector"
 )

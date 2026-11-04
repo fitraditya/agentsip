@@ -26,6 +26,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 
@@ -40,9 +41,11 @@ const (
 	audioFormatULaw8000 = "ulaw_8000"
 )
 
-type TTS struct{}
+type TTS struct {
+	debug bool
+}
 
-func New() *TTS { return &TTS{} }
+func New(debug bool) *TTS { return &TTS{debug: debug} }
 
 func (t *TTS) StartSession(ctx context.Context, cfg conversation.TTSSessionConfig) (conversation.TTSSession, error) {
 	if cfg.VoiceID == "" {
@@ -70,7 +73,7 @@ func (t *TTS) StartSession(ctx context.Context, cfg conversation.TTSSessionConfi
 		return nil, fmt.Errorf("elevenlabs tts: send init message: %w", err)
 	}
 
-	sess := &session{conn: conn, audio: make(chan []byte, 16)}
+	sess := &session{conn: conn, audio: make(chan []byte, 16), debug: t.debug}
 	go sess.readLoop()
 	return sess, nil
 }
@@ -94,6 +97,7 @@ type audioMessage struct {
 type session struct {
 	conn  *websocket.Conn
 	audio chan []byte
+	debug bool
 }
 
 func (s *session) SendText(chunk string, flush bool) error {
@@ -123,6 +127,9 @@ func (s *session) readLoop() {
 		var msg audioMessage
 		if err := s.conn.ReadJSON(&msg); err != nil {
 			return
+		}
+		if s.debug {
+			slog.Info("TTS elevenlabs audio received", "isFinal", msg.IsFinal, "hasAudio", msg.Audio != "")
 		}
 		if msg.Audio != "" {
 			raw, err := base64.StdEncoding.DecodeString(msg.Audio)

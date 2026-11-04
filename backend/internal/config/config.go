@@ -37,6 +37,12 @@ type Config struct {
 	// "full".
 	LogParameters string `env:"LOG_PARAMETERS" envDefault:"off"`
 
+	// Debug logs every pipeline step (STT transcript, LLM deltas, audio
+	// received from websockets) at INFO — for diagnosing why a call has no
+	// audio. Never enable in production: it prints transcripts and response
+	// text to the log.
+	Debug bool `env:"AGENTSIP_DEBUG" envDefault:"false"`
+
 	SIPListenAddr    string `env:"SIP_LISTEN_ADDR" envDefault:":5060"`
 	SIPAdvertiseHost string `env:"SIP_ADVERTISE_HOST,required"`
 	RTPBindIP        string `env:"RTP_BIND_IP" envDefault:"0.0.0.0"`

@@ -52,7 +52,7 @@ func TestStreamChat_ContentDeltas(t *testing.T) {
 	})
 	defer srv.Close()
 
-	llm := openaicompat.New()
+	llm := openaicompat.New(false)
 	deltas, err := llm.StreamChat(t.Context(), conversation.LLMConfig{BaseURL: srv.URL, APIKey: "test-key", Model: "gpt-4o-mini"}, []conversation.LLMMessage{{Role: "user", Content: "hi"}}, nil)
 	if err != nil {
 		t.Fatalf("StreamChat: %v", err)
@@ -85,7 +85,7 @@ func TestStreamChat_ToolCallAccumulatesAcrossChunks(t *testing.T) {
 	})
 	defer srv.Close()
 
-	llm := openaicompat.New()
+	llm := openaicompat.New(false)
 	deltas, err := llm.StreamChat(t.Context(), conversation.LLMConfig{BaseURL: srv.URL, APIKey: "test-key"}, []conversation.LLMMessage{{Role: "user", Content: "what's your refund policy?"}}, []conversation.ToolSpec{{Name: "search_knowledge_base"}})
 	if err != nil {
 		t.Fatalf("StreamChat: %v", err)
@@ -117,7 +117,7 @@ func TestStreamChat_NonOKStatusReturnsError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	llm := openaicompat.New()
+	llm := openaicompat.New(false)
 	_, err := llm.StreamChat(t.Context(), conversation.LLMConfig{BaseURL: srv.URL, APIKey: "bad-key"}, nil, nil)
 	if err == nil {
 		t.Fatal("expected an error for a 401 response, got nil")

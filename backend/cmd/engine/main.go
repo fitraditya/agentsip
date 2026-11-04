@@ -196,9 +196,9 @@ func run() error {
 	// is exactly one provider per port for v1 (ElevenLabs STT/TTS, any
 	// OpenAI-compatible LLM).
 	convoSvc := conversation.NewService(
-		sttelevenlabs.New(),
-		ttselevenlabs.New(),
-		llmopenaicompat.New(),
+		sttelevenlabs.New(cfg.Debug),
+		ttselevenlabs.New(cfg.Debug),
+		llmopenaicompat.New(cfg.Debug),
 		kbSvc,
 		log,
 	)

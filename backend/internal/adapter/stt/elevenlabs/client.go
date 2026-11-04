@@ -25,6 +25,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 
@@ -40,9 +41,11 @@ const (
 	audioFormatULaw8 = "ulaw_8000"
 )
 
-type STT struct{}
+type STT struct {
+	debug bool
+}
 
-func New() *STT { return &STT{} }
+func New(debug bool) *STT { return &STT{debug: debug} }
 
 func (s *STT) StartSession(ctx context.Context, cfg conversation.STTSessionConfig) (conversation.STTSession, error) {
 	model := cfg.Model
@@ -61,7 +64,7 @@ func (s *STT) StartSession(ctx context.Context, cfg conversation.STTSessionConfi
 		return nil, fmt.Errorf("elevenlabs stt: dial: %w", err)
 	}
 
-	sess := &session{conn: conn, events: make(chan conversation.TranscriptEvent, 16)}
+	sess := &session{conn: conn, events: make(chan conversation.TranscriptEvent, 16), debug: s.debug}
 	go sess.readLoop()
 	return sess, nil
 }
@@ -81,6 +84,7 @@ type serverMessage struct {
 type session struct {
 	conn   *websocket.Conn
 	events chan conversation.TranscriptEvent
+	debug  bool
 }
 
 func (s *session) SendAudio(frame []byte) error {
@@ -102,6 +106,9 @@ func (s *session) readLoop() {
 		var msg serverMessage
 		if err := s.conn.ReadJSON(&msg); err != nil {
 			return
+		}
+		if s.debug {
+			slog.Info("STT elevenlabs event", "type", msg.MessageType, "text", msg.Text)
 		}
 		switch msg.MessageType {
 		case "partial_transcript":

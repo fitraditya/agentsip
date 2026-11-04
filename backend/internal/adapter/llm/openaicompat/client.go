@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -20,10 +21,11 @@ import (
 
 type LLM struct {
 	httpClient *http.Client
+	debug      bool
 }
 
-func New() *LLM {
-	return &LLM{httpClient: &http.Client{}}
+func New(debug bool) *LLM {
+	return &LLM{httpClient: &http.Client{}, debug: debug}
 }
 
 type chatMessage struct {
@@ -108,7 +110,7 @@ func (l *LLM) StreamChat(ctx context.Context, cfg conversation.LLMConfig, messag
 	}
 
 	out := make(chan conversation.LLMDelta)
-	go streamSSE(resp.Body, out)
+	go streamSSE(resp.Body, out, l.debug)
 	return out, nil
 }
 
@@ -120,7 +122,7 @@ type toolCallAccum struct {
 	args strings.Builder
 }
 
-func streamSSE(body io.ReadCloser, out chan<- conversation.LLMDelta) {
+func streamSSE(body io.ReadCloser, out chan<- conversation.LLMDelta, debug bool) {
 	defer close(out)
 	defer body.Close()
 
@@ -149,6 +151,9 @@ func streamSSE(body io.ReadCloser, out chan<- conversation.LLMDelta) {
 		}
 		delta := chunk.Choices[0].Delta
 		if delta.Content != "" {
+			if debug {
+				slog.Info("LLM openaicompat delta", "content", delta.Content)
+			}
 			out <- conversation.LLMDelta{ContentDelta: delta.Content}
 		}
 		for _, tc := range delta.ToolCalls {

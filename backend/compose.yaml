@@ -1,0 +1,49 @@
+# Postgres for local development and the integration suite — same reasoning
+# as obrelin's compose.yaml: the engine itself is deliberately NOT here,
+# since it needs --network host to work at all (SIP and RTP carry addresses
+# that Docker's bridge NAT does not rewrite), and host networking inside
+# compose is both platform-dependent and easy to get silently wrong. Running
+# the engine is one documented `docker run`; this file exists so Postgres is
+# not a README recipe.
+#
+#   docker compose up -d --wait
+#   make migrate-up DATABASE_URL="postgres://agentsip@127.0.0.1:55433/agentsip_test?sslmode=disable"
+#   make migrate-vectorstore-up VECTORSTORE_DATABASE_URL="postgres://agentsip@127.0.0.1:55433/agentsip_test?sslmode=disable"
+#
+# One Postgres instance serves both the main schema and the vector store by
+# default — config.VectorStoreDSN() falls back to DATABASE_URL when
+# VECTORSTORE_DATABASE_URL is unset, which is the common case locally. The
+# pgvector/pgvector image (not plain postgres) is what makes the vector-store
+# migration's CREATE EXTENSION succeed; that extension is a no-op for the
+# main schema, which never uses it.
+#
+# Port 55433 is deliberately not the standard 5432: a developer machine
+# usually already has something on it, and a test suite silently running
+# against someone's real database is a worse outcome than a port nobody
+# recognizes.
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: agentsip
+      POSTGRES_DB: agentsip_test
+      # Local-only, and trust auth keeps the integration suite's DSN free of
+      # a credential that would then want managing. Never use this shape
+      # anywhere reachable.
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "127.0.0.1:55433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agentsip -d agentsip_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+    # Data lives in a named volume rather than the host: these are test
+    # fixtures, and the recovery for a corrupted one is
+    # `docker compose down -v`.
+    volumes:
+      - agentsip-pgdata:/var/lib/postgresql/data
+
+volumes:
+  agentsip-pgdata:

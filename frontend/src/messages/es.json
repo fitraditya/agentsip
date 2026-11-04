@@ -1,0 +1,1391 @@
+{
+  "common": {
+    "home": "Inicio",
+    "edit": "Editar",
+    "close": "Cerrar",
+    "saveChanges": "Guardar cambios",
+    "viewMore": "Ver más",
+    "delete": "Eliminar",
+    "filter": "Filtrar",
+    "seeAll": "Ver todo",
+    "confirm": "Confirmar",
+    "cancel": "Cancelar",
+    "loading": "Cargando...",
+    "retry": "Reintentar"
+  },
+  "sidebar": {
+    "groups": {
+      "menu": "Menú",
+      "support": "Soporte",
+      "others": "Otros"
+    },
+    "badges": {
+      "new": "nuevo",
+      "pro": "pro"
+    },
+    "items": {
+      "dashboard": "Panel",
+      "ecommerceHome": "Comercio electrónico",
+      "analytics": "Analítica",
+      "marketing": "Marketing",
+      "crm": "CRM",
+      "stocks": "Acciones",
+      "saas": "SaaS",
+      "logistics": "Logística",
+      "ai": "IA",
+      "sales": "Ventas",
+      "finance": "Finanzas",
+      "aiAssistant": "Asistente de IA",
+      "textGenerator": "Generador de texto",
+      "imageGenerator": "Generador de imágenes",
+      "codeGenerator": "Generador de código",
+      "videoGenerator": "Generador de video",
+      "aiSettings": "Configuración de IA",
+      "ecommerce": "Comercio electrónico",
+      "products": "Productos",
+      "addProduct": "Añadir producto",
+      "billing": "Facturación",
+      "invoices": "Facturas",
+      "singleInvoice": "Factura individual",
+      "createInvoice": "Crear factura",
+      "transactions": "Transacciones",
+      "singleTransaction": "Transacción individual",
+      "calendar": "Calendario",
+      "userProfile": "Perfil de usuario",
+      "task": "Tareas",
+      "taskList": "Lista",
+      "kanban": "Kanban",
+      "forms": "Formularios",
+      "formElements": "Elementos de formulario",
+      "formLayout": "Diseño de formulario",
+      "tables": "Tablas",
+      "basicTables": "Tablas básicas",
+      "dataTables": "Tablas de datos",
+      "pages": "Páginas",
+      "fileManager": "Gestor de archivos",
+      "pricingTables": "Tablas de precios",
+      "faq": "Preguntas frecuentes",
+      "providers": "Proveedores",
+      "sttProviders": "Proveedores STT",
+      "llmProviders": "Proveedores LLM",
+      "ttsProviders": "Proveedores TTS",
+      "trunks": "Troncales",
+      "knowledgeBases": "Bases de Conocimiento",
+      "calls": "Registro de llamadas",
+      "integrations": "Integraciones",
+      "blankPage": "Página en blanco",
+      "error404": "Error 404",
+      "error500": "Error 500",
+      "error503": "Error 503",
+      "comingSoon": "Próximamente",
+      "maintenance": "Mantenimiento",
+      "successPage": "Éxito",
+      "layouts": "Diseños",
+      "layoutOne": "Diseño uno",
+      "layoutTwo": "Diseño dos",
+      "layoutThree": "Diseño tres",
+      "layoutFour": "Diseño cuatro",
+      "layoutFive": "Diseño cinco",
+      "layoutSix": "Diseño seis",
+      "charts": "Gráficos",
+      "lineChart": "Gráfico de líneas",
+      "barChart": "Gráfico de barras",
+      "pieChart": "Gráfico circular",
+      "radarChart": "Gráfico de radar",
+      "radialChart": "Gráfico radial",
+      "maps": "Mapas",
+      "mapsGoogle": "Mapas",
+      "vectorMap": "Mapa vectorial",
+      "uiElements": "Elementos de UI",
+      "alerts": "Alertas",
+      "avatar": "Avatar",
+      "badge": "Insignia",
+      "breadcrumb": "Migas de pan",
+      "buttons": "Botones",
+      "buttonsGroup": "Grupo de botones",
+      "cards": "Tarjetas",
+      "carousel": "Carrusel",
+      "dropdowns": "Desplegables",
+      "images": "Imágenes",
+      "links": "Enlaces",
+      "listView": "Lista",
+      "dialogs": "Diálogos",
+      "notificationUi": "Notificación",
+      "pagination": "Paginación",
+      "popovers": "Popovers",
+      "progressbar": "Barra de progreso",
+      "ribbons": "Cintas",
+      "spinners": "Indicadores de carga",
+      "tabs": "Pestañas",
+      "tooltips": "Tooltips",
+      "videos": "Videos",
+      "authentication": "Autenticación",
+      "signIn": "Iniciar sesión",
+      "signUp": "Registrarse",
+      "resetPassword": "Restablecer contraseña",
+      "twoStepVerification": "Verificación en dos pasos",
+      "chat": "Chat",
+      "supportMenu": "Soporte",
+      "supportList": "Lista de soporte",
+      "supportReply": "Respuesta de soporte",
+      "email": "Correo",
+      "inbox": "Bandeja de entrada",
+      "inboxDetails": "Detalles",
+      "hr": "Recursos Humanos",
+      "emptyState": "Estado vacío",
+      "variants01": "Variantes 01",
+      "variants02": "Variantes 02",
+      "variants03": "Variantes 03",
+      "variants04": "Variantes 04",
+      "variants05": "Variantes 05"
+    },
+    "widget": {
+      "title": "Panel n.º 1 de Tailwind CSS",
+      "description": "Plantilla de administración líder de Tailwind CSS con más de 500 componentes y páginas de UI.",
+      "purchasePlan": "Comprar plan"
+    }
+  },
+  "header": {
+    "toggleSidebar": "Alternar barra lateral"
+  },
+  "userDropdown": {
+    "editProfile": "Editar perfil",
+    "language": "Idioma",
+    "signOut": "Cerrar sesión"
+  },
+  "ecommerce": {
+    "title": "Panel de comercio electrónico",
+    "metrics": {
+      "customers": "Clientes",
+      "orders": "Pedidos"
+    },
+    "months": {
+      "jan": "Jan",
+      "feb": "Feb",
+      "mar": "Mar",
+      "apr": "Apr",
+      "may": "May",
+      "jun": "Jun",
+      "jul": "Jul",
+      "aug": "Aug",
+      "sep": "Sep",
+      "oct": "Oct",
+      "nov": "Nov",
+      "dec": "Dec"
+    },
+    "monthlySales": {
+      "title": "Ventas mensuales",
+      "series": "Ventas"
+    },
+    "monthlyTarget": {
+      "title": "Objetivo mensual",
+      "subtitle": "Objetivo que has fijado para cada mes",
+      "earned": "Hoy has ganado {amount}, más que el mes pasado. ¡Sigue así!",
+      "target": "Objetivo",
+      "revenue": "Ingresos",
+      "today": "Hoy"
+    },
+    "statistics": {
+      "title": "Estadísticas",
+      "subtitle": "Objetivo que has fijado para cada mes",
+      "overview": "Resumen",
+      "sales": "Ventas",
+      "revenue": "Ingresos",
+      "monthly": "Mensual",
+      "quarterly": "Trimestral",
+      "annually": "Anual",
+      "selectDateRange": "Seleccionar rango de fechas"
+    },
+    "recentOrders": {
+      "title": "Pedidos recientes",
+      "products": "Productos",
+      "category": "Categoría",
+      "price": "Precio",
+      "status": "Estado",
+      "variants": "{count, plural, one {# variante} other {# variantes}}",
+      "categories": {
+        "laptop": "Portátil",
+        "watch": "Reloj",
+        "smartphone": "Smartphone",
+        "electronics": "Electrónica",
+        "accessories": "Accesorios"
+      },
+      "statuses": {
+        "delivered": "Entregado",
+        "pending": "Pendiente",
+        "canceled": "Cancelado"
+      }
+    },
+    "demographic": {
+      "title": "Demografía de clientes",
+      "subtitle": "Número de clientes por país",
+      "customers": "{count} clientes",
+      "usa": "USA",
+      "france": "France",
+      "yemen": "Yemen",
+      "uk": "UK"
+    }
+  },
+  "analytics": {
+    "metrics": {
+      "uniqueVisitors": "Visitantes únicos",
+      "totalPageviews": "Páginas vistas totales",
+      "bounceRate": "Tasa de rebote",
+      "visitDuration": "Duración de la visita",
+      "vsLastMonth": "Vs el mes anterior"
+    },
+    "barChart": {
+      "title": "Analítica",
+      "subtitle": "Analítica de visitantes de los últimos 30 días",
+      "twelveMonths": "12 meses",
+      "thirtyDays": "30 días",
+      "sevenDays": "7 días",
+      "twentyFourHours": "24 horas",
+      "visitors": "Visitantes"
+    },
+    "topChannels": {
+      "title": "Canales principales",
+      "source": "Fuente",
+      "visitors": "Visitantes",
+      "channelsReport": "Informe de canales"
+    },
+    "topPages": {
+      "title": "Páginas principales",
+      "source": "Fuente",
+      "pageview": "Páginas vistas",
+      "channelsReport": "Informe de canales"
+    },
+    "activeUsers": {
+      "title": "Usuarios activos",
+      "liveVisitors": "Visitantes en vivo",
+      "avgDaily": "Promedio diario",
+      "avgWeekly": "Promedio semanal",
+      "avgMonthly": "Promedio mensual"
+    },
+    "acquisitionChannels": {
+      "title": "Canales de adquisición",
+      "direct": "Directo",
+      "organic": "Orgánico",
+      "referral": "Referencia",
+      "total": "Total: 120k"
+    },
+    "session": {
+      "title": "Sesiones por dispositivo",
+      "total": "Total"
+    },
+    "recentOrders": {
+      "title": "Pedidos recientes",
+      "products": "Productos",
+      "category": "Categoría",
+      "country": "País",
+      "cr": "CR",
+      "value": "Valor",
+      "categories": {
+        "uiKits": "Kits de interfaz",
+        "templates": "Plantillas",
+        "saas": "SaaS"
+      },
+      "crDashboard": "Panel"
+    }
+  },
+  "notFound": {
+    "error": "ERROR",
+    "message": "¡Parece que no podemos encontrar la página que buscas!",
+    "backHome": "Volver a la página de inicio"
+  },
+  "marketing": {
+    "metrics": {
+      "avgClientRating": "Calificación media de clientes",
+      "instagramFollowers": "Seguidores de Instagram",
+      "totalRevenue": "Ingresos totales",
+      "vsLastMonth": "Vs el mes anterior"
+    },
+    "impressionChart": {
+      "title": "Impresión y tráfico de datos",
+      "totalRevenue": "Ingresos totales",
+      "sales": "Ventas",
+      "revenue": "Ingresos",
+      "selectDateRange": "Seleccionar rango de fechas"
+    },
+    "featuredCampaign": {
+      "title": "Campañas destacadas",
+      "viewMore": "Ver más",
+      "delete": "Eliminar",
+      "products": "Productos",
+      "campaign": "Campaña",
+      "status": "Estado",
+      "adsCampaign": "Campaña publicitaria",
+      "campaigns": {
+        "growBrand": "Haz crecer tu marca con...",
+        "betterIdeas": "Crea mejores ideas...",
+        "increaseTraffic": "Aumenta el tráfico de tu web..."
+      },
+      "statuses": {
+        "success": "Éxito",
+        "pending": "Pendiente",
+        "failed": "Fallido"
+      }
+    },
+    "trafficStats": {
+      "title": "Estadísticas de tráfico",
+      "today": "Hoy",
+      "week": "Semana",
+      "month": "Mes",
+      "viewMore": "Ver más",
+      "delete": "Eliminar",
+      "newSubscribers": "Nuevos suscriptores",
+      "conversionRate": "Tasa de conversión",
+      "pageBounceRate": "Tasa de rebote de página",
+      "thenLastWeek": "que la semana pasada",
+      "thanYesterday": "que ayer",
+      "thanLastMonth": "que el mes pasado",
+      "newSales": "Nuevas ventas"
+    },
+    "trafficSource": {
+      "title": "Fuente de tráfico principal",
+      "viewMore": "Ver más",
+      "delete": "Eliminar",
+      "viewAll": "Ver todo"
+    }
+  },
+  "crm": {
+    "metrics": {
+      "activeDeal": "Trato activo",
+      "revenueTotal": "Ingresos totales",
+      "closedDeals": "Tratos cerrados",
+      "lastMonth": "el mes pasado"
+    },
+    "statistics": {
+      "title": "Estadísticas",
+      "subtitle": "Objetivo establecido para cada mes",
+      "avgYearlyProfit": "Beneficio anual promedio",
+      "sales": "Ventas",
+      "revenue": "Ingresos",
+      "monthly": "Mensual",
+      "quarterly": "Trimestral",
+      "annually": "Anual"
+    },
+    "estimatedRevenue": {
+      "title": "Ingresos estimados",
+      "subtitle": "Objetivo establecido para cada mes",
+      "goals": "Objetivos de junio",
+      "marketing": "Marketing",
+      "sales": "Ventas"
+    },
+    "salesCategory": {
+      "title": "Categoría de ventas",
+      "affiliate": "Afiliado",
+      "direct": "Directo",
+      "adsense": "Adsense",
+      "affiliateProgram": "Programa de afiliados",
+      "directBuy": "Compra directa",
+      "products": "Productos",
+      "total": "Total",
+      "usedOf": "Usado de"
+    },
+    "upcomingSchedule": {
+      "title": "Próximo calendario",
+      "schedules": {
+        "item1": {
+          "title": "Prensa de analítica de negocios",
+          "description": "Explorando el futuro impulsado por datos +6 más"
+        },
+        "item2": {
+          "title": "Sprint de negocios",
+          "description": "Técnicas de sprint de negocios +2 más"
+        },
+        "item3": {
+          "title": "Reunión de revisión de clientes",
+          "description": "Perspectivas de la reunión de clientes +8 más"
+        }
+      }
+    },
+    "recentOrders": {
+      "title": "Pedidos recientes",
+      "searchPlaceholder": "Buscar...",
+      "dealId": "ID de trato",
+      "customer": "Cliente",
+      "productService": "Producto/Servicio",
+      "dealValue": "Valor del trato",
+      "closeDate": "Fecha de cierre",
+      "status": "Estado",
+      "action": "Acción",
+      "products": {
+        "softwareLicense": "Licencia de software",
+        "cloudHosting": "Alojamiento en la nube",
+        "webDomain": "Dominio web",
+        "sslCertificate": "Certificado SSL",
+        "premiumSupport": "Soporte premium"
+      },
+      "statuses": {
+        "complete": "Completado",
+        "pending": "Pendiente",
+        "cancel": "Cancelado"
+      },
+      "noOrders": "No se encontraron pedidos",
+      "noOrdersDescription": "Intente ajustar su búsqueda o filtro para encontrar lo que busca."
+    }
+  },
+  "stocks": {
+    "title": "Acciones",
+    "dividend": {
+      "title": "Dividendo",
+      "series": "Dividendo",
+      "viewMore": "Ver más",
+      "delete": "Eliminar"
+    },
+    "portfolioPerformance": {
+      "title": "Rendimiento de la cartera",
+      "subtitle": "Aquí están tus estadísticas de rendimiento de cada mes",
+      "series": "Rendimiento de la cartera",
+      "monthly": "Mensual",
+      "quarterly": "Trimestral",
+      "annually": "Anual"
+    },
+    "trendingStocks": {
+      "title": "Acciones en tendencia",
+      "shortStock": "Vender en corto",
+      "buyStock": "Comprar acción"
+    },
+    "watchlist": {
+      "title": "Mi lista de seguimiento",
+      "viewMore": "Ver más",
+      "delete": "Eliminar"
+    },
+    "latestTransactions": {
+      "title": "Últimas transacciones",
+      "searchPlaceholder": "Buscar...",
+      "table": {
+        "name": "Nombre",
+        "date": "Fecha",
+        "price": "Precio",
+        "category": "Categoría",
+        "status": "Estado"
+      },
+      "actions": {
+        "bought": "Comprado {symbol}",
+        "sell": "Vender {symbol}"
+      },
+      "categories": {
+        "finance": "Finanzas",
+        "technology": "Tecnología",
+        "ecommerce": "Comercio electrónico",
+        "media": "Redes sociales"
+      },
+      "statuses": {
+        "success": "Éxito",
+        "pending": "Pendiente",
+        "failed": "Fallido"
+      }
+    }
+  },
+  "saas": {
+    "title": "SaaS",
+    "metrics": {
+      "overview": "Resumen general",
+      "totalRevenue": "Ingresos totales",
+      "activeUsers": "Usuarios activos",
+      "clv": "Valor de vida del cliente",
+      "cac": "Coste de adquisición de clientes",
+      "weekly": "Semanal",
+      "monthly": "Mensual",
+      "yearly": "Anual",
+      "filter": "Filtrar"
+    },
+    "churnRate": {
+      "title": "Tasa de cancelación",
+      "subtitle": "Cambio al plan gratuito",
+      "thanLastWeek": "que la semana pasada",
+      "series": "Tasa de cancelación",
+      "viewMore": "Ver más",
+      "delete": "Eliminar"
+    },
+    "userGrowth": {
+      "title": "Crecimiento de usuarios",
+      "subtitle": "Nuevos registros web + móvil",
+      "thanLastWeek": "que la semana pasada",
+      "series": "Ingresos",
+      "viewMore": "Ver más",
+      "delete": "Eliminar"
+    },
+    "conversionFunnel": {
+      "title": "Embudo de conversión",
+      "total": "Total: 120k",
+      "viewMore": "Ver más",
+      "delete": "Eliminar",
+      "series": {
+        "adImpression": "Impresión de anuncios",
+        "adImpressions": "Impresiones de anuncios",
+        "websiteSession": "Sesiones del sitio web",
+        "appDownload": "Descargas de la app",
+        "newUsers": "Nuevos usuarios"
+      }
+    },
+    "recentInvoices": {
+      "title": "Facturas recientes",
+      "table": {
+        "serialNo": "N.º de serie:",
+        "closeDate": "Fecha de cierre",
+        "user": "Usuario",
+        "amount": "Monto",
+        "status": "Estado"
+      },
+      "statuses": {
+        "complete": "Completado",
+        "pending": "Pendiente",
+        "cancelled": "Cancelado"
+      }
+    },
+    "productPerformance": {
+      "title": "Rendimiento del producto",
+      "viewMore": "Ver más",
+      "delete": "Eliminar",
+      "tabs": {
+        "dailySales": "Ventas diarias",
+        "onlineSales": "Ventas en línea",
+        "newUsers": "Nuevos usuarios"
+      },
+      "digitalProduct": "Producto digital",
+      "physicalProduct": "Producto físico",
+      "avgDailySales": "Ventas diarias promedio",
+      "totalOnlineSales": "Ventas totales en línea",
+      "addedLastMonth": "Añadidos el mes pasado",
+      "totalNewUsers": "Total de nuevos usuarios",
+      "series": {
+        "sales": "Ventas",
+        "revenue": "Ingresos"
+      }
+    },
+    "activities": {
+      "title": "Actividades",
+      "viewMore": "Ver más",
+      "delete": "Eliminar",
+      "newInvoice": "Nueva factura",
+      "createdInvoice": "creó la factura"
+    }
+  },
+  "logistics": {
+    "title": "Logística",
+    "metrics": {
+      "totalOrders": "Pedidos totales",
+      "ordersInTransit": "Pedidos en tránsito"
+    },
+    "deliveryStatistics": {
+      "title": "Estadísticas de entrega",
+      "subtitle": "Número total de entregas 70.5K",
+      "monthly": "Mensual",
+      "yearly": "Anual",
+      "shipment": "Envío",
+      "inTransit": "En tránsito",
+      "delivery": "Entrega"
+    },
+    "revenueEarned": {
+      "totalRevenue": "Ingresos totales obtenidos",
+      "shippedQuantities": "Cantidades enviadas",
+      "newSales": "Nuevas ventas"
+    },
+    "deliveryVehicle": {
+      "title": "Vehículos de entrega",
+      "subtitle": "Vehículos operando en carretera",
+      "thanLastWeek": "que la semana pasada",
+      "onRoute": "En ruta"
+    },
+    "trackingDelivery": {
+      "title": "Seguimiento de entrega",
+      "subtitle": "Historial de entregas visto recientemente"
+    },
+    "trackingProgress": {
+      "trackingId": "ID de seguimiento",
+      "inTransit": "En tránsito",
+      "pickedUp": "Recogido",
+      "delivered": "Entregado"
+    },
+    "deliveryMan": {
+      "courier": "Mensajero"
+    },
+    "deliveriesActivity": {
+      "title": "Actividades de entrega",
+      "subtitle": "Rastrea tus actividades de envío recientes",
+      "tabs": {
+        "all": "Todos los envíos",
+        "delivered": "Entregado",
+        "inTransit": "En tránsito",
+        "pending": "Pendiente",
+        "processing": "En proceso"
+      },
+      "filter": {
+        "button": "Filtrar",
+        "category": "Categoría",
+        "searchCategory": "Buscar categoría...",
+        "company": "Empresa",
+        "searchCompany": "Buscar empresa...",
+        "apply": "Aplicar"
+      },
+      "table": {
+        "orderId": "ID de pedido",
+        "category": "Categoría",
+        "company": "Empresa",
+        "arrivalTime": "Hora de llegada",
+        "route": "Ruta",
+        "price": "Precio",
+        "status": "Estado"
+      },
+      "categories": {
+        "furniture": "Muebles",
+        "clothing": "Ropa",
+        "books": "Libros",
+        "automotive": "Automotriz",
+        "electronics": "Electrónica",
+        "health": "Salud",
+        "toys": "Juguetes",
+        "kitchen": "Cocina",
+        "beauty": "Belleza",
+        "sports": "Deportes"
+      },
+      "statuses": {
+        "delivered": "Entregado",
+        "inTransit": "En tránsito",
+        "pending": "Pendiente",
+        "processing": "Procesando",
+        "canceled": "Cancelado"
+      },
+      "pagination": {
+        "showing": "Mostrando",
+        "to": "a",
+        "of": "de",
+        "page": "Página"
+      }
+    }
+  },
+  "aiDashboard": {
+    "stats": {
+      "users": "Usuarios",
+      "projects": "Proyectos",
+      "revenue": "Ingresos",
+      "paidUsers": "Usuarios de pago",
+      "last30Days": "Últimos 30 días"
+    },
+    "userRevenue": {
+      "title": "Estadísticas de usuarios e ingresos",
+      "subtitle": "Visualice el progreso y la interacción mes a mes.",
+      "users": "Usuarios",
+      "revenue": "Ingresos",
+      "monthly": "Mensual",
+      "quarterly": "Trimestral",
+      "annually": "Anual"
+    },
+    "apiToken": {
+      "title": "Uso de tokens de API",
+      "totalApiTokenUsed": "Total de tokens de API usados",
+      "tokenUsed": "Tokens usados",
+      "configuredKey": "{count, plural, one {# clave de API configurada} other {# claves de API configuradas}}",
+      "viewAllUsageDetails": "Ver todos los detalles de uso"
+    },
+    "userAnalytics": {
+      "title": "Análisis de usuarios",
+      "subtitle": "Información sobre los usuarios de la plataforma",
+      "totalUsers": "Total de usuarios",
+      "freeUsers": "Usuarios gratuitos",
+      "paidUsers": "Usuarios de pago",
+      "ofTotalUser": "del total de usuarios",
+      "thisMonth": "Este mes",
+      "fromLastMonth": "desde el mes pasado",
+      "thisYear": "Este año",
+      "fromLastYear": "desde el año pasado"
+    },
+    "projectAnalytics": {
+      "title": "Análisis de proyectos",
+      "subtitle": "Ver información detallada de los proyectos",
+      "totalProjects": "Total de proyectos",
+      "today": "Hoy",
+      "yesterday": "Ayer",
+      "projectCreated": "Proyecto creado",
+      "thisMonth": "Este mes",
+      "fromLastMonth": "desde el mes pasado",
+      "thisYear": "Este año",
+      "fromLastYear": "desde el año pasado"
+    },
+    "recentTransactions": {
+      "title": "Transacciones recientes",
+      "searchPlaceholder": "Buscar...",
+      "filter": "Filtrar",
+      "noTransactions": "No se encontraron transacciones",
+      "noTransactionsDescription": "Intente ajustar su búsqueda o filtro para encontrar lo que busca.",
+      "table": {
+        "paidBy": "Pagado por",
+        "packageName": "Nombre del paquete",
+        "price": "Precio",
+        "paidDate": "Fecha de pago",
+        "status": "Estado",
+        "actions": "Acciones"
+      },
+      "packages": {
+        "starterMonthly": "Inicial - Mensual",
+        "growthYearly": "Crecimiento - Anual",
+        "premiumMonthly": "Premium - Mensual"
+      },
+      "statuses": {
+        "active": "Activo",
+        "expired": "Caducado"
+      },
+      "pagination": {
+        "previous": "Anterior",
+        "next": "Siguiente",
+        "pageOf": "Página {current} de {total}"
+      }
+    }
+  },
+  "sales": {
+    "salesStats": {
+      "title": "Panel de ventas",
+      "subtitle": "Rastree los ingresos, el rendimiento y el crecimiento de las ventas en tiempo real",
+      "selectDateRange": "Seleccionar rango de fechas",
+      "export": "Exportar",
+      "totalRevenue": "Ingresos totales",
+      "totalSales": "Ventas totales",
+      "conversionRate": "Tasa de conversión",
+      "refundRate": "Tasa de reembolso",
+      "vsLastMonth": "frente al mes pasado",
+      "newSales": "Nuevas ventas"
+    },
+    "userRevenueStats": {
+      "title": "Estadísticas de usuarios e ingresos",
+      "subtitle": "Visualice el progreso y la interacción mes a mes.",
+      "daily": "Diario",
+      "weekly": "Semanal",
+      "monthly": "Mensual",
+      "onlineSales": "Ventas en línea",
+      "offlineSales": "Ventas fuera de línea"
+    },
+    "revenueChart": {
+      "title": "Desglose de ingresos",
+      "subtitle": "Información sobre ingresos y descripción general del rendimiento",
+      "daily": "Diario",
+      "weekly": "Semanal",
+      "monthly": "Mensual",
+      "online": "En línea",
+      "offline": "Fuera de línea"
+    },
+    "userRetention": {
+      "title": "Retención de usuarios",
+      "subtitle": "Interacción de los usuarios a lo largo del tiempo",
+      "increasedVsLastWeek": "Incremento frente a la semana pasada"
+    },
+    "salesByChannel": {
+      "title": "Ventas por canal",
+      "subtitle": "Resumen del rendimiento del canal",
+      "increasedVsLastWeek": "Incremento frente a la semana pasada",
+      "channels": {
+        "website": "Sitio web",
+        "email": "Correo electrónico",
+        "socialMedia": "Redes sociales"
+      },
+      "table": {
+        "channels": "Canales",
+        "metric": "Métrica",
+        "total": "Total"
+      }
+    },
+    "salesByCountry": {
+      "title": "Ventas por país",
+      "subtitle": "Resumen de ventas por país",
+      "countries": {
+        "usa": "EE. UU.",
+        "france": "Francia",
+        "japan": "Japón",
+        "egypt": "Egipto",
+        "germany": "Alemania"
+      }
+    },
+    "topProducts": {
+      "title": "Productos destacados",
+      "searchPlaceholder": "Buscar...",
+      "noProducts": "No se encontraron productos",
+      "noProductsDescription": "Intente cambiar su término de búsqueda.",
+      "table": {
+        "productName": "Nombre del producto",
+        "productId": "ID del producto",
+        "category": "Categoría",
+        "sales": "Ventas",
+        "earnings": "Ganancias",
+        "stocks": "Existencias",
+        "status": "Estado"
+      },
+      "products": {
+        "classicDenimJacket": "Chaqueta vaquera clásica",
+        "slimFitChinos": "Pantalones chinos slim fit",
+        "organicCottonTShirt": "Camiseta de algodón orgánico",
+        "leatherAnkleBoots": "Botines de cuero",
+        "woolBlendScarf": "Bufanda de mezcla de lana"
+      },
+      "variants": {
+        "threeSizes": "3 tallas",
+        "fourColors": "4 colores",
+        "fiveColors": "5 colores",
+        "sixSizes": "6 tallas",
+        "twoColors": "2 colores"
+      },
+      "categories": {
+        "jacket": "Chaqueta",
+        "pants": "Pantalones",
+        "tShirt": "Camiseta",
+        "footwear": "Calzado",
+        "accessory": "Accesorio"
+      },
+      "statuses": {
+        "inStock": "En stock",
+        "lowStock": "Poco stock",
+        "outOfStock": "Agotado"
+      }
+    }
+  },
+  "finance": {
+    "totalBalanceOverview": {
+      "title": "Saldo total",
+      "overview": "Resumen de sus fondos actuales",
+      "thanLastMonth": "frente al mes pasado",
+      "primaryAccount": "Cuenta principal:",
+      "seeDetails": "Ver detalles",
+      "transfer": "Transferir",
+      "received": "Recibido",
+      "balance": "Saldo"
+    },
+    "stats": {
+      "totalBalance": "Saldo total",
+      "monthlyIncome": "Ingresos mensuales",
+      "totalSpent": "Total gastado",
+      "savingRate": "Tasa de ahorro",
+      "thanLastMonth": "frente al mes pasado",
+      "goalProgress": "Meta: 30% - 3.9% restante"
+    },
+    "cashflow": {
+      "title": "Resumen de flujo de caja",
+      "totalRevenue": "Ingresos totales",
+      "income": "Ingresos",
+      "expense": "Gastos"
+    },
+    "spending": {
+      "title": "Gastos",
+      "yearly": "Anual",
+      "monthly": "Mensual",
+      "total": "Total",
+      "categories": {
+        "activity": "Actividad",
+        "onlinePurchases": "Compras en línea",
+        "groceries": "Comestibles",
+        "digitalGoods": "Bienes digitales",
+        "stationery": "Papelería",
+        "others": "Otros"
+      }
+    },
+    "quickSend": {
+      "title": "Envío rápido",
+      "sendFrom": "Enviar desde",
+      "currency": "Moneda",
+      "amount": "Monto",
+      "sendMoney": "Enviar dinero"
+    },
+    "myCards": {
+      "title": "Mis tarjetas",
+      "addCard": "Añadir tarjeta",
+      "virtualCard": "Tarjeta virtual",
+      "recentTransactions": "Transacciones recientes",
+      "seeAllTransactions": "Ver todas las transacciones",
+      "transactions": {
+        "paymentReceived": "Pago recibido",
+        "cashbackDesc": "Reembolso de Stellar Rewards",
+        "netflixSubscription": "Suscripción a Netflix",
+        "netflixDesc": "Cargo de suscripción de septiembre",
+        "moneyReceived": "Dinero recibido",
+        "paypalDesc": "Pago recibido mediante PayPal",
+        "googleAds": "Google Ads",
+        "googleAdsDesc": "Pago recibido de Google Ads"
+      }
+    },
+    "transactionsTable": {
+      "title": "Transacciones recientes",
+      "searchPlaceholder": "Buscar...",
+      "filter": "Filtro",
+      "table": {
+        "orderId": "ID del pedido",
+        "activity": "Actividad",
+        "price": "Precio",
+        "date": "Fecha",
+        "status": "Estado"
+      },
+      "activities": {
+        "hotelBooking": "Reserva de hotel",
+        "onlineShopping": "Compras en línea",
+        "gamePurchase": "Compra de juegos",
+        "utilityBillPayment": "Pago de servicios públicos",
+        "onlineCourseEnrollment": "Inscripción en curso en línea"
+      },
+      "statuses": {
+        "completed": "Completado",
+        "inProgress": "En progreso"
+      }
+    }
+  },
+  "hr": {
+    "header": {
+      "title": "Panel de RR. HH.",
+      "subtitle": "Esto es lo que está sucediendo en tu equipo.",
+      "dateRange": "16 ago. 2028 - 16 sep. 2028",
+      "addMember": "Añadir miembro"
+    },
+    "quickStats": {
+      "title": "Estadísticas rápidas",
+      "monthly": "Mensual",
+      "weekly": "Semanal",
+      "yearly": "Anual",
+      "thanLastMonth": "que el mes anterior",
+      "thanLastWeek": "que la semana anterior",
+      "thanLastYear": "que el año anterior",
+      "totalEmployee": "Total de empleados",
+      "activeEmployee": "Empleados activos",
+      "onLeave": "De permiso",
+      "totalPayroll": "Nómina total"
+    },
+    "attendanceOverview": {
+      "title": "Resumen de asistencia",
+      "monthly": "Mensual",
+      "weekly": "Semanal",
+      "yearly": "Anual",
+      "days": {
+        "mon": "Lun",
+        "tue": "Mar",
+        "wed": "Mié",
+        "thu": "Jue",
+        "fri": "Vie",
+        "sat": "Sáb",
+        "sun": "Dom"
+      }
+    },
+    "employeeByDepartment": {
+      "title": "Empleados por departamento",
+      "thanLastMonth": "que el mes anterior",
+      "viewDetails": "Ver detalles",
+      "exportData": "Exportar datos",
+      "departments": {
+        "engineering": "Ingeniería",
+        "marketing": "Marketing",
+        "sales": "Ventas",
+        "hr": "Recursos Humanos",
+        "finance": "Finanzas",
+        "others": "Otros"
+      }
+    },
+    "interviewAndMeetings": {
+      "title": "Entrevistas y reuniones",
+      "monthYear": "Enero 2027",
+      "joinNow": "Unirse ahora",
+      "days": {
+        "mon": "Lun",
+        "tue": "Mar",
+        "wed": "Mié",
+        "thu": "Jue",
+        "fri": "Vie",
+        "sat": "Sáb",
+        "sun": "Dom"
+      },
+      "meetings": {
+        "productSync": "Sincronización del equipo de producto",
+        "frontendInterview": "Entrevista de candidatos - Desarrollador Frontend"
+      }
+    },
+    "jobStatistics": {
+      "title": "Estadísticas de empleo",
+      "monthly": "Mensual",
+      "weekly": "Semanal",
+      "yearly": "Anual",
+      "totalJob": "Total de empleos",
+      "activeJob": "Empleos activos",
+      "interview": "En entrevista",
+      "hired": "Contratados"
+    },
+    "employeeGrowth": {
+      "title": "Crecimiento de empleados",
+      "weekly": "Semanal",
+      "monthly": "Mensual",
+      "yearly": "Anual",
+      "series": "Empleados",
+      "days": {
+        "sat": "Sáb",
+        "sun": "Dom",
+        "mon": "Lun",
+        "tue": "Mar",
+        "wed": "Mié",
+        "thu": "Jue",
+        "fri": "Vie"
+      }
+    },
+    "employeeDirectory": {
+      "title": "Directorio de empleados",
+      "searchPlaceholder": "Buscar...",
+      "filter": "Filtrar",
+      "noEmployeesTitle": "No se encontraron empleados",
+      "allDepartment": "Todos los departamentos",
+      "allStatus": "Todos los estados",
+      "table": {
+        "users": "Usuarios",
+        "department": "Departamento",
+        "role": "Rol",
+        "status": "Estado",
+        "joined": "Ingreso",
+        "action": "Acción"
+      },
+      "departments": {
+        "all": "Todos los departamentos",
+        "engineering": "Ingeniería",
+        "hr": "RR. HH.",
+        "sales": "Ventas",
+        "marketing": "Marketing",
+        "finance": "Finanzas"
+      },
+      "statuses": {
+        "all": "Todos los estados",
+        "active": "Activo",
+        "onboarding": "Incorporación",
+        "onLeave": "De permiso"
+      },
+      "roles": {
+        "seniorDeveloper": "Desarrollador Senior",
+        "juniorDeveloper": "Desarrollador Junior",
+        "hrSpecialist": "Especialista en RR. HH.",
+        "accountExecutive": "Ejecutivo de cuentas"
+      },
+      "noEmployees": "No se encontraron empleados que coincidan con los criterios seleccionados."
+    }
+  },
+  "dashboard": {
+    "title": "Panel",
+    "subtitle": "Un resumen de tu implementación de AgentSIP.",
+    "stats": {
+      "activeTrunks": "Troncales activos",
+      "knowledgeBases": "Bases de conocimiento",
+      "callsToday": "Llamadas de hoy",
+      "callsTodayCaption": "Recuento aproximado basado en las llamadas obtenidas más recientemente — no es un total diario exacto.",
+      "providers": "Proveedores"
+    },
+    "dispositionChart": {
+      "title": "Llamadas por disposición",
+      "subtitle": "Desglose de las llamadas obtenidas más recientemente",
+      "series": "Llamadas"
+    },
+    "errors": {
+      "loadFailed": "No se pudieron cargar los datos del panel"
+    }
+  },
+  "knowledgeBases": {
+    "title": "Bases de conocimiento",
+    "createButton": "Crear base de conocimiento",
+    "table": {
+      "name": "Nombre",
+      "embeddingProvider": "Proveedor de embeddings",
+      "vectorStore": "Almacén vectorial",
+      "createdAt": "Creado",
+      "actions": "Acciones",
+      "view": "Ver"
+    },
+    "vectorStore": {
+      "platformManaged": "Gestionado por la plataforma",
+      "custom": "Personalizado"
+    },
+    "empty": "Aún no hay bases de conocimiento.",
+    "errors": {
+      "loadFailed": "No se pudieron cargar las bases de conocimiento"
+    },
+    "createDialog": {
+      "title": "Crear base de conocimiento",
+      "description": "Configura una nueva base de conocimiento para que la busquen tus troncales.",
+      "generalSection": "General",
+      "name": "Nombre",
+      "namePlaceholder": "p. ej. Preguntas frecuentes del producto",
+      "embeddingSection": "Embeddings",
+      "provider": "Proveedor",
+      "baseUrl": "URL base",
+      "baseUrlPlaceholder": "https://api.openai.com/v1",
+      "apiKey": "Clave de API",
+      "apiKeyPlaceholder": "sk-...",
+      "model": "Modelo",
+      "modelPlaceholder": "text-embedding-3-small",
+      "customVectorStore": "Usar tu propio Postgres",
+      "customVectorStoreDescription": "Usa tu propia base de datos Postgres con pgvector en lugar del almacén gestionado por la plataforma.",
+      "vectorStoreSection": "Almacén de vectores",
+      "dsn": "Cadena de conexión (DSN)",
+      "dsnPlaceholder": "postgres://usuario:contraseña@host:5432/bd",
+      "submit": "Crear",
+      "submitting": "Creando...",
+      "cancel": "Cancelar"
+    },
+    "detail": {
+      "backLink": "Volver a bases de conocimiento",
+      "configTitle": "Configuración",
+      "embeddingProvider": "Proveedor",
+      "embeddingModel": "Modelo",
+      "embeddingBaseUrl": "URL base",
+      "apiKeyConfigured": "Clave de API configurada",
+      "apiKeyNotConfigured": "Clave de API no configurada",
+      "vectorStoreTitle": "Almacén vectorial",
+      "vectorStoreProvider": "Proveedor",
+      "vectorStoreCustomDsn": "DSN personalizado configurado",
+      "vectorStorePlatformManaged": "Gestionado por la plataforma",
+      "documentsTitle": "Documentos",
+      "ingestButton": "Ingerir documento",
+      "documentsTable": {
+        "sourceUri": "Origen",
+        "status": "Estado",
+        "failureReason": "Motivo del fallo"
+      },
+      "documentsEmpty": "Aún no hay documentos.",
+      "errors": {
+        "loadFailed": "No se pudo cargar la base de conocimiento",
+        "documentsLoadFailed": "No se pudieron cargar los documentos"
+      }
+    },
+    "ingestDialog": {
+      "title": "Ingerir documento",
+      "description": "Pega texto plano o sube un archivo PDF/.txt/.md para agregarlo a esta base de conocimiento.",
+      "pasteTab": "Pegar texto",
+      "uploadTab": "Subir archivo",
+      "sourceUri": "Etiqueta de origen",
+      "sourceUriPlaceholder": "p. ej. manual.pdf o https://ejemplo.com/doc",
+      "text": "Texto del documento",
+      "textPlaceholder": "Pega aquí el contenido en texto plano del documento...",
+      "dropzoneTitleActive": "Suelta el archivo aquí",
+      "dropzoneTitleIdle": "Arrastra y suelta un archivo aquí",
+      "dropzoneSubtitle": "PDF, .txt o .md — hasta 20MB",
+      "dropzoneBrowse": "Buscar archivo",
+      "removeFile": "Quitar archivo",
+      "fileRequired": "Elige un archivo para subir",
+      "unsupportedFileType": "Tipo de archivo no admitido — solo se aceptan .pdf, .txt y .md",
+      "fileTooLarge": "El archivo es demasiado grande (máx. 20MB)",
+      "submit": "Ingerir",
+      "submitting": "Ingiriendo...",
+      "uploadSubmit": "Subir",
+      "uploadSubmitting": "Subiendo...",
+      "cancel": "Cancelar",
+      "successTitle": "Documento ingerido",
+      "successDescription": "El documento se ingirió correctamente.",
+      "failedTitle": "Fallo en la ingesta",
+      "failedDescriptionFallback": "No se pudo procesar el documento."
+    },
+    "documentStatus": {
+      "PENDING": "Pendiente",
+      "PROCESSING": "Procesando",
+      "READY": "Listo",
+      "FAILED": "Fallido"
+    }
+  },
+  "sttProviders": {
+    "title": "Proveedores STT",
+    "createButton": "Añadir proveedor STT",
+    "deleting": "Eliminando...",
+    "deleteConfirm": "¿Eliminar el proveedor STT \"{name}\"? Esta acción no se puede deshacer.",
+    "table": {
+      "name": "Nombre",
+      "provider": "Proveedor",
+      "model": "Modelo",
+      "createdAt": "Creado",
+      "actions": "Acciones"
+    },
+    "empty": "Todavía no hay proveedores STT.",
+    "errors": {
+      "loadFailed": "No se pudieron cargar los proveedores STT",
+      "deleteFailed": "No se pudo eliminar el proveedor STT. Inténtalo de nuevo.",
+      "deleteConflict": "Este proveedor todavía está en uso por una o más troncales — reasígnalas o elimínalas primero."
+    },
+    "form": {
+      "sectionTitle": "Proveedor de voz a texto",
+      "name": "Nombre",
+      "namePlaceholder": "p. ej. ElevenLabs principal",
+      "provider": "Proveedor",
+      "providerPlaceholder": "Selecciona un proveedor",
+      "model": "Modelo",
+      "modelPlaceholder": "p. ej. scribe_v1",
+      "apiKey": "Clave API",
+      "apiKeyOptional": "Opcional",
+      "apiKeyConfigured": "configurada — déjala en blanco para borrarla",
+      "apiKeyNotSet": "no configurada",
+      "saveErrorTitle": "No se pudo guardar el proveedor STT",
+      "fullReplaceWarningTitle": "Guardar reenvía la configuración completa",
+      "fullReplaceWarningBody": "Editar este proveedor reenvía toda su configuración — no es una actualización parcial. El campo de clave API dejado en blanco se borrará. Vuelve a introducirla solo si quieres cambiarla, pero ten en cuenta que se borrará si se deja vacía."
+    },
+    "new": {
+      "title": "Nuevo proveedor STT",
+      "submit": "Crear",
+      "submitting": "Creando...",
+      "cancel": "Cancelar",
+      "genericError": "No se pudo crear el proveedor STT. Inténtalo de nuevo."
+    },
+    "edit": {
+      "title": "Editar proveedor STT",
+      "submit": "Guardar",
+      "submitting": "Guardando...",
+      "cancel": "Cancelar",
+      "genericError": "No se pudo guardar el proveedor STT. Inténtalo de nuevo.",
+      "errors": {
+        "loadFailed": "No se pudo cargar el proveedor STT"
+      }
+    }
+  },
+  "llmProviders": {
+    "title": "Proveedores LLM",
+    "createButton": "Añadir proveedor LLM",
+    "deleting": "Eliminando...",
+    "deleteConfirm": "¿Eliminar el proveedor LLM \"{name}\"? Esta acción no se puede deshacer.",
+    "table": {
+      "name": "Nombre",
+      "provider": "Proveedor",
+      "model": "Modelo",
+      "baseUrl": "URL base",
+      "createdAt": "Creado",
+      "actions": "Acciones"
+    },
+    "empty": "Todavía no hay proveedores LLM.",
+    "errors": {
+      "loadFailed": "No se pudieron cargar los proveedores LLM",
+      "deleteFailed": "No se pudo eliminar el proveedor LLM. Inténtalo de nuevo.",
+      "deleteConflict": "Este proveedor todavía está en uso por una o más troncales — reasígnalas o elimínalas primero."
+    },
+    "form": {
+      "sectionTitle": "Proveedor de modelo de lenguaje",
+      "name": "Nombre",
+      "namePlaceholder": "p. ej. OpenAI principal",
+      "provider": "Proveedor",
+      "providerPlaceholder": "Selecciona un proveedor",
+      "model": "Modelo",
+      "modelPlaceholder": "p. ej. gpt-4o-mini",
+      "baseUrl": "URL base",
+      "baseUrlPlaceholder": "https://api.openai.com/v1",
+      "apiKey": "Clave API",
+      "apiKeyOptional": "Opcional",
+      "apiKeyConfigured": "configurada — déjala en blanco para borrarla",
+      "apiKeyNotSet": "no configurada",
+      "saveErrorTitle": "No se pudo guardar el proveedor LLM",
+      "fullReplaceWarningTitle": "Guardar reenvía la configuración completa",
+      "fullReplaceWarningBody": "Editar este proveedor reenvía toda su configuración — no es una actualización parcial. El campo de clave API dejado en blanco se borrará. Vuelve a introducirla solo si quieres cambiarla, pero ten en cuenta que se borrará si se deja vacía."
+    },
+    "new": {
+      "title": "Nuevo proveedor LLM",
+      "submit": "Crear",
+      "submitting": "Creando...",
+      "cancel": "Cancelar",
+      "genericError": "No se pudo crear el proveedor LLM. Inténtalo de nuevo."
+    },
+    "edit": {
+      "title": "Editar proveedor LLM",
+      "submit": "Guardar",
+      "submitting": "Guardando...",
+      "cancel": "Cancelar",
+      "genericError": "No se pudo guardar el proveedor LLM. Inténtalo de nuevo.",
+      "errors": {
+        "loadFailed": "No se pudo cargar el proveedor LLM"
+      }
+    }
+  },
+  "ttsProviders": {
+    "title": "Proveedores TTS",
+    "createButton": "Añadir proveedor TTS",
+    "deleting": "Eliminando...",
+    "deleteConfirm": "¿Eliminar el proveedor TTS \"{name}\"? Esta acción no se puede deshacer.",
+    "table": {
+      "name": "Nombre",
+      "provider": "Proveedor",
+      "model": "Modelo",
+      "voiceId": "ID de voz",
+      "createdAt": "Creado",
+      "actions": "Acciones"
+    },
+    "empty": "Todavía no hay proveedores TTS.",
+    "errors": {
+      "loadFailed": "No se pudieron cargar los proveedores TTS",
+      "deleteFailed": "No se pudo eliminar el proveedor TTS. Inténtalo de nuevo.",
+      "deleteConflict": "Este proveedor todavía está en uso por una o más troncales — reasígnalas o elimínalas primero."
+    },
+    "form": {
+      "sectionTitle": "Proveedor de texto a voz",
+      "name": "Nombre",
+      "namePlaceholder": "p. ej. Voz ElevenLabs principal",
+      "provider": "Proveedor",
+      "providerPlaceholder": "Selecciona un proveedor",
+      "model": "Modelo",
+      "modelPlaceholder": "p. ej. eleven_turbo_v2",
+      "voiceId": "ID de voz",
+      "voiceIdPlaceholder": "p. ej. 21m00Tcm4TlvDq8ikWAM",
+      "apiKey": "Clave API",
+      "apiKeyOptional": "Opcional",
+      "apiKeyConfigured": "configurada — déjala en blanco para borrarla",
+      "apiKeyNotSet": "no configurada",
+      "saveErrorTitle": "No se pudo guardar el proveedor TTS",
+      "fullReplaceWarningTitle": "Guardar reenvía la configuración completa",
+      "fullReplaceWarningBody": "Editar este proveedor reenvía toda su configuración — no es una actualización parcial. El campo de clave API dejado en blanco se borrará. Vuelve a introducirla solo si quieres cambiarla, pero ten en cuenta que se borrará si se deja vacía."
+    },
+    "new": {
+      "title": "Nuevo proveedor TTS",
+      "submit": "Crear",
+      "submitting": "Creando...",
+      "cancel": "Cancelar",
+      "genericError": "No se pudo crear el proveedor TTS. Inténtalo de nuevo."
+    },
+    "edit": {
+      "title": "Editar proveedor TTS",
+      "submit": "Guardar",
+      "submitting": "Guardando...",
+      "cancel": "Cancelar",
+      "genericError": "No se pudo guardar el proveedor TTS. Inténtalo de nuevo.",
+      "errors": {
+        "loadFailed": "No se pudo cargar el proveedor TTS"
+      }
+    }
+  },
+  "calls": {
+    "title": "Llamadas",
+    "table": {
+      "caller": "Llamante → Destinatario",
+      "direction": "Dirección",
+      "disposition": "Disposición",
+      "startTime": "Hora de inicio",
+      "duration": "Duración",
+      "trunk": "Troncal"
+    },
+    "direction": {
+      "INBOUND": "Entrante",
+      "OUTBOUND": "Saliente"
+    },
+    "disposition": {
+      "IN_PROGRESS": "En curso",
+      "ANSWERED": "Contestada",
+      "BUSY": "Ocupado",
+      "NO_ANSWER": "Sin respuesta",
+      "FAILED": "Fallida",
+      "CANCELLED": "Cancelada"
+    },
+    "empty": "Aún no hay llamadas.",
+    "loadMore": "Cargar más",
+    "errors": {
+      "loadFailed": "No se pudieron cargar las llamadas"
+    },
+    "detail": {
+      "backLink": "Volver a llamadas",
+      "overviewTitle": "Detalles de la llamada",
+      "sipCallId": "ID de llamada SIP",
+      "callerNumber": "Número del llamante",
+      "calleeNumber": "Número del destinatario",
+      "direction": "Dirección",
+      "disposition": "Disposición",
+      "trunkId": "ID del troncal",
+      "startTime": "Hora de inicio",
+      "answerTime": "Hora de respuesta",
+      "endTime": "Hora de finalización",
+      "duration": "Duración",
+      "recording": "Grabación",
+      "noRecording": "No hay grabación disponible",
+      "createdAt": "Creado",
+      "updatedAt": "Actualizado",
+      "errors": {
+        "loadFailed": "No se pudo cargar la llamada"
+      }
+    }
+  }
+}

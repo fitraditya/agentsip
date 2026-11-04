@@ -1,0 +1,13 @@
+DROP TABLE IF EXISTS documents;
+DROP TABLE IF EXISTS knowledge_bases;
+DROP TABLE IF EXISTS turns;
+DROP TABLE IF EXISTS calls;
+DROP TRIGGER IF EXISTS trunks_enforce_limit ON trunks;
+DROP FUNCTION IF EXISTS enforce_trunk_limit();
+DROP TABLE IF EXISTS trunks;
+DROP TABLE IF EXISTS tts_providers;
+DROP TABLE IF EXISTS llm_providers;
+DROP TABLE IF EXISTS stt_providers;
+DROP TABLE IF EXISTS email_tokens;
+DROP TABLE IF EXISTS sessions;
+DROP TABLE IF EXISTS users;

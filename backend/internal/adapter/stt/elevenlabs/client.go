@@ -29,9 +29,12 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 
 	"github.com/fitraditya/agentsip/internal/usecase/conversation"
@@ -171,6 +174,15 @@ func (s *STT) StartSession(ctx context.Context, cfg conversation.STTSessionConfi
 		events: make(chan conversation.TranscriptEvent, 16),
 		debug:  s.debug,
 	}
+	if s.debug {
+		// Dump raw PCM for offline analysis when AGENTSIP_DEBUG=true
+		// File: /tmp/stt_<session_id>_<timestamp>.pcm (16-bit 8k mono)
+		fname := filepath.Join(os.TempDir(), fmt.Sprintf("stt_%s_%d.pcm", uuid.New().String()[:8], time.Now().Unix()))
+		if f, err := os.Create(fname); err == nil {
+			sess.dumpFile = f
+			slog.Info("STT elevenlabs dump file", "path", fname, "format", "pcm_s16le_8000_mono")
+		}
+	}
 	go sess.readLoop()
 	go sess.flushLoop()
 	return sess, nil
@@ -210,6 +222,8 @@ type session struct {
 	lastHighEnergy   time.Time
 	bytesSinceCommit int
 	speechSeen       bool
+
+	dumpFile *os.File
 }
 
 func (s *session) sendChunk(b []byte) error {
@@ -218,6 +232,10 @@ func (s *session) sendChunk(b []byte) error {
 	}
 	if s.debug {
 		slog.Info("STT elevenlabs sendChunk", "bytes", len(b))
+	}
+	// dump to file for offline analysis
+	if s.dumpFile != nil {
+		_, _ = s.dumpFile.Write(b)
 	}
 	s.connMu.Lock()
 	defer s.connMu.Unlock()
@@ -368,7 +386,14 @@ func (s *session) Close() error {
 			slog.Info("STT elevenlabs final commit on close", "bytes", bytesSince+len(leftover))
 		}
 		_ = s.sendCommit()
-		time.Sleep(300 * time.Millisecond)
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	if s.dumpFile != nil {
+		_ = s.dumpFile.Close()
+		if s.debug {
+			slog.Info("STT elevenlabs dump closed", "path", s.dumpFile.Name())
+		}
 	}
 
 	s.connMu.Lock()

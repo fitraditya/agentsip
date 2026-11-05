@@ -45,10 +45,10 @@ const (
 	// Legacy ulaw format kept for reference but now we transcode to PCM.
 	audioFormatULaw8 = "ulaw_8000"
 	// Docs require at least 0.3s uncommitted before manual commit.
-	// 0.3s @16k mono 16-bit = 9600 bytes. Use 1s chunks = 32000 bytes for safer VAD.
-	// We buffer decoded PCM and flush 1s batches, max delay 500ms for low latency.
-	flushBytes          = 9600
-	flushInterval       = 500 * time.Millisecond
+	// But telephony with 2pps needs small flush to keep pipeline alive.
+	// Use 40ms min (1280 bytes) flush, accumulate for commit 0.3s.
+	flushBytes          = 1280
+	flushInterval       = 200 * time.Millisecond
 	minCommitBytes      = 9600 // 0.3s minimum for commit_throttled guard
 	manualCommitSilence = 800 * time.Millisecond
 )

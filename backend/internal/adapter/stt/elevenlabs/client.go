@@ -44,10 +44,13 @@ const (
 	audioFormatPCM16 = "pcm_16000"
 	// Legacy ulaw format kept for reference but now we transcode to PCM.
 	audioFormatULaw8 = "ulaw_8000"
-	// 100ms of 16kHz 16-bit PCM = 3200 bytes. Docs recommend 0.1-1s chunks.
-	// We buffer decoded PCM and flush at least 100ms batches, but up to 500ms max delay.
-	flushBytes    = 3200
-	flushInterval = 500 * time.Millisecond
+	// Docs require at least 0.3s uncommitted before manual commit.
+	// 0.3s @16k mono 16-bit = 9600 bytes. Use 1s chunks = 32000 bytes for safer VAD.
+	// We buffer decoded PCM and flush 1s batches, max delay 500ms for low latency.
+	flushBytes          = 9600
+	flushInterval       = 500 * time.Millisecond
+	minCommitBytes      = 9600 // 0.3s minimum for commit_throttled guard
+	manualCommitSilence = 800 * time.Millisecond
 )
 
 // ulaw to linear PCM table generated from standard G.711 mu-law decode.
@@ -138,17 +141,13 @@ func (s *STT) StartSession(ctx context.Context, cfg conversation.STTSessionConfi
 	q := url.Values{}
 	q.Set("model_id", model)
 	q.Set("audio_format", audioFormatPCM16)
-	q.Set("commit_strategy", "vad")
-	// VAD tuning for telephony: more sensitive than default.
-	// Previous 0.4 still missed speech with energy 8k. Try 0.2 and faster silence.
+	// Switch to manual: VAD was not firing even with energy 8k, and manual
+	// lets us control commit timing and avoid commit_throttled (needs 0.3s min).
+	q.Set("commit_strategy", "manual")
 	q.Set("vad_silence_threshold_secs", "0.5")
 	q.Set("vad_threshold", "0.2")
 	q.Set("min_speech_duration_ms", "50")
-	// keepalive prevents server closing after 15s with no client msgs
-	// (happens during silence when no RTP arrives). Empty partials from
-	// keepalive are filtered in conversation/service.go.
 	q.Set("keepalive_interval_ms", "1000")
-	// include timestamps helps debugging, also enables word-level
 	q.Set("include_timestamps", "true")
 
 	header := http.Header{"xi-api-key": []string{cfg.APIKey}}
@@ -198,7 +197,9 @@ type session struct {
 	bufMu sync.Mutex
 	buf   []byte
 
-	lastHighEnergy time.Time
+	lastHighEnergy   time.Time
+	bytesSinceCommit int
+	speechSeen       bool
 }
 
 func (s *session) sendChunk(b []byte) error {
@@ -210,46 +211,60 @@ func (s *session) sendChunk(b []byte) error {
 	}
 	s.connMu.Lock()
 	defer s.connMu.Unlock()
-	return s.conn.WriteJSON(inputAudioChunk{
+	err := s.conn.WriteJSON(inputAudioChunk{
 		MessageType: "input_audio_chunk",
 		AudioBase64: base64.StdEncoding.EncodeToString(b),
 		Commit:      false,
 		SampleRate:  sampleRateHz,
 	})
+	if err == nil {
+		s.bufMu.Lock()
+		s.bytesSinceCommit += len(b)
+		s.bufMu.Unlock()
+	}
+	return err
 }
 
 func (s *session) sendCommit() error {
+	s.bufMu.Lock()
+	if s.bytesSinceCommit < minCommitBytes {
+		if s.debug {
+			slog.Info("STT elevenlabs commit skipped, not enough audio", "bytes", s.bytesSinceCommit, "need", minCommitBytes)
+		}
+		s.bufMu.Unlock()
+		return nil
+	}
+	s.bufMu.Unlock()
+
 	if s.debug {
-		slog.Info("STT elevenlabs sendCommit manual")
+		slog.Info("STT elevenlabs sendCommit manual", "bytesSinceCommit", s.bytesSinceCommit)
 	}
 	s.connMu.Lock()
 	defer s.connMu.Unlock()
-	return s.conn.WriteJSON(inputAudioChunk{
+	err := s.conn.WriteJSON(inputAudioChunk{
 		MessageType: "input_audio_chunk",
 		AudioBase64: "",
 		Commit:      true,
 		SampleRate:  sampleRateHz,
 	})
+	if err == nil {
+		s.bufMu.Lock()
+		s.bytesSinceCommit = 0
+		s.speechSeen = false
+		s.bufMu.Unlock()
+	}
+	return err
 }
 
 func (s *session) SendAudio(frame []byte) error {
 	// frame is raw ulaw_8000 from RTP (20ms = 160 bytes). Transcode to pcm_16000 for better VAD.
 	pcm := decodeUlawToPCM16(frame)
-	energy := 0
-	if s.debug {
-		energy = pcmEnergy(pcm)
-		if energy > 1000 {
-			s.bufMu.Lock()
-			s.lastHighEnergy = time.Now()
-			s.bufMu.Unlock()
-		}
-	} else {
-		// still track without debug for commit logic, using same threshold
-		if pcmEnergy(pcm) > 1000 {
-			s.bufMu.Lock()
-			s.lastHighEnergy = time.Now()
-			s.bufMu.Unlock()
-		}
+	energy := pcmEnergy(pcm)
+	if energy > 800 {
+		s.bufMu.Lock()
+		s.lastHighEnergy = time.Now()
+		s.speechSeen = true
+		s.bufMu.Unlock()
 	}
 
 	s.bufMu.Lock()
@@ -286,6 +301,8 @@ func (s *session) flushLoop() {
 			s.buf = s.buf[:0]
 		}
 		lastHigh := s.lastHighEnergy
+		hasSpeech := s.speechSeen
+		bytesSinceCommit := s.bytesSinceCommit
 		s.bufMu.Unlock()
 
 		if hasBuf {
@@ -300,16 +317,20 @@ func (s *session) flushLoop() {
 			}
 		}
 
-		// Manual commit fallback: if we had speech and then 800ms silence, force commit to get transcript
-		if !lastHigh.IsZero() && time.Since(lastHigh) > 800*time.Millisecond {
-			s.bufMu.Lock()
-			// clear to avoid repeated commits
-			s.lastHighEnergy = time.Time{}
-			s.bufMu.Unlock()
-			if s.debug {
-				slog.Info("STT elevenlabs commit after silence")
+		// Manual commit: if we saw speech and then silence, commit.
+		// Need at least 0.3s audio else ElevenLabs returns commit_throttled.
+		if hasSpeech && !lastHigh.IsZero() && time.Since(lastHigh) > manualCommitSilence {
+			if bytesSinceCommit >= minCommitBytes {
+				s.bufMu.Lock()
+				s.lastHighEnergy = time.Time{}
+				s.bufMu.Unlock()
+				if s.debug {
+					slog.Info("STT elevenlabs commit after silence", "bytesSinceCommit", bytesSinceCommit)
+				}
+				_ = s.sendCommit()
+			} else if s.debug {
+				slog.Info("STT elevenlabs commit delayed, not enough audio", "bytesSinceCommit", bytesSinceCommit)
 			}
-			_ = s.sendCommit()
 		}
 	}
 }

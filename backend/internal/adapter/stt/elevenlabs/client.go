@@ -44,12 +44,12 @@ const (
 	audioFormatPCM16 = "pcm_8000" // native 8k PCM, no upsample artifacts
 	// Legacy ulaw format kept for reference
 	audioFormatULaw8 = "ulaw_8000"
-	// Use 80ms flush (1280B) for liveness, but commit only after 0.6s accumulated to avoid throttling and improve accuracy.
+	// Use 80ms flush (1280B) for liveness, commit after 0.3s (4800B @8k) minimum per ElevenLabs.
 	flushBytes            = 1280
 	flushInterval         = 200 * time.Millisecond
-	minCommitBytes        = 9600 // 0.6s @8k PCM16, ensures at least 0.3s min and more context for "good morning"
-	manualCommitSilence   = 1200 * time.Millisecond
-	speechEnergyThreshold = 500
+	minCommitBytes        = 4800 // 0.3s @8k PCM16, minimum required by ElevenLabs
+	manualCommitSilence   = 800 * time.Millisecond
+	speechEnergyThreshold = 300
 )
 
 // ulaw to linear PCM table generated from standard G.711 mu-law decode.
@@ -348,16 +348,29 @@ func (s *session) flushLoop() {
 func (s *session) Events() <-chan conversation.TranscriptEvent { return s.events }
 
 func (s *session) Close() error {
-	// flush remaining buffered audio before close
+	// flush remaining buffered audio before close and force final commit
 	s.bufMu.Lock()
 	leftover := append([]byte(nil), s.buf...)
 	s.buf = s.buf[:0]
+	hasSpeech := s.speechSeen
+	bytesSince := s.bytesSinceCommit
 	s.bufMu.Unlock()
+
 	if len(leftover) > 0 {
 		_ = s.sendChunk(leftover)
-		// small delay to let server process final chunk before socket close
 		time.Sleep(100 * time.Millisecond)
 	}
+
+	// Final commit on hangup to ensure last utterance is transcribed,
+	// even if silence threshold not yet reached. Only if we saw speech.
+	if hasSpeech && bytesSince+len(leftover) >= minCommitBytes {
+		if s.debug {
+			slog.Info("STT elevenlabs final commit on close", "bytes", bytesSince+len(leftover))
+		}
+		_ = s.sendCommit()
+		time.Sleep(300 * time.Millisecond)
+	}
+
 	s.connMu.Lock()
 	defer s.connMu.Unlock()
 	return s.conn.Close()

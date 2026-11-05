@@ -40,14 +40,73 @@ import (
 const (
 	wsURL            = "wss://api.elevenlabs.io/v1/speech-to-text/realtime"
 	defaultModel     = "scribe_v2_realtime"
-	sampleRateHz     = 8000
+	sampleRateHz     = 16000
+	audioFormatPCM16 = "pcm_16000"
+	// Legacy ulaw format kept for reference but now we transcode to PCM.
 	audioFormatULaw8 = "ulaw_8000"
-	// flushBytes = 200ms of 8kHz ulaw (160 bytes * 10). Docs recommend
-	// 0.1-1s chunks, not 20ms (160 bytes) — tiny chunks cause queue_overflow
-	// and waste. We buffer in session and flush 200ms batches.
-	flushBytes    = 1600
+	// 200ms of 16kHz 16-bit PCM = 32000 bytes/sec * 0.2 = 6400 bytes.
+	// Docs recommend 0.1-1s chunks. We buffer decoded PCM and flush 200ms batches.
+	flushBytes    = 6400
 	flushInterval = 200 * time.Millisecond
 )
+
+// ulaw to linear PCM table generated from standard G.711 mu-law decode.
+var ulawDecodeTable [256]int16
+
+func init() {
+	for i := 0; i < 256; i++ {
+		ulawDecodeTable[i] = ulawToLinear(byte(i))
+	}
+}
+
+func ulawToLinear(ulaw byte) int16 {
+	ulaw = ^ulaw
+	sign := ulaw & 0x80
+	exponent := (ulaw >> 4) & 0x07
+	mantissa := ulaw & 0x0F
+	sample := int16(mantissa<<3) + 0x84
+	sample <<= exponent
+	sample -= 0x84
+	if sign != 0 {
+		sample = -sample
+	}
+	return sample
+}
+
+// decodeUlawToPCM16 decodes mu-law bytes to little-endian 16-bit PCM, upsampling 8k->16k by duplication.
+func decodeUlawToPCM16(ulaw []byte) []byte {
+	// each ulaw byte -> one 8k sample -> two 16k samples (dup) -> 4 bytes PCM16
+	out := make([]byte, 0, len(ulaw)*4)
+	for _, b := range ulaw {
+		s := ulawDecodeTable[b]
+		// little endian
+		lo := byte(s)
+		hi := byte(s >> 8)
+		// dup for 8k->16k
+		out = append(out, lo, hi, lo, hi)
+	}
+	return out
+}
+
+func pcmEnergy(pcm []byte) int {
+	if len(pcm) < 2 {
+		return 0
+	}
+	var sum int64
+	var count int64
+	for i := 0; i+1 < len(pcm); i += 2 {
+		s := int16(pcm[i]) | int16(pcm[i+1])<<8
+		if s < 0 {
+			s = -s
+		}
+		sum += int64(s)
+		count++
+	}
+	if count == 0 {
+		return 0
+	}
+	return int(sum / count)
+}
 
 type STT struct {
 	debug bool
@@ -63,14 +122,17 @@ func (s *STT) StartSession(ctx context.Context, cfg conversation.STTSessionConfi
 
 	q := url.Values{}
 	q.Set("model_id", model)
-	q.Set("audio_format", audioFormatULaw8)
+	q.Set("audio_format", audioFormatPCM16)
 	q.Set("commit_strategy", "vad")
 	// VAD tuning for telephony: faster commit, avoid long empty segments.
 	q.Set("vad_silence_threshold_secs", "0.8")
+	q.Set("vad_threshold", "0.4")
 	// keepalive prevents server closing after 15s with no client msgs
 	// (happens during silence when no RTP arrives). Empty partials from
 	// keepalive are filtered in conversation/service.go.
 	q.Set("keepalive_interval_ms", "1000")
+	// lower min speech to catch short utterances over telephony
+	q.Set("min_speech_duration_ms", "100")
 
 	header := http.Header{"xi-api-key": []string{cfg.APIKey}}
 	conn, _, err := websocket.DefaultDialer.DialContext(ctx, wsURL+"?"+q.Encode(), header)
@@ -138,8 +200,15 @@ func (s *session) sendChunk(b []byte) error {
 }
 
 func (s *session) SendAudio(frame []byte) error {
+	// frame is raw ulaw_8000 from RTP (20ms = 160 bytes). Transcode to pcm_16000 for better VAD.
+	pcm := decodeUlawToPCM16(frame)
+	energy := 0
+	if s.debug {
+		energy = pcmEnergy(pcm)
+	}
+
 	s.bufMu.Lock()
-	s.buf = append(s.buf, frame...)
+	s.buf = append(s.buf, pcm...)
 	shouldFlush := len(s.buf) >= flushBytes
 	var toSend []byte
 	if shouldFlush {
@@ -148,10 +217,10 @@ func (s *session) SendAudio(frame []byte) error {
 	}
 	bufLen := len(s.buf)
 	s.bufMu.Unlock()
+
 	if s.debug && len(frame) > 0 {
-		// log every 25 frames (5 sec) to avoid spam, but first one always
-		if bufLen < 200 || bufLen%4000 == 0 {
-			slog.Info("STT elevenlabs buffered", "incoming", len(frame), "buffered", bufLen, "flushing", shouldFlush)
+		if bufLen < 7000 || bufLen%32000 == 0 {
+			slog.Info("STT elevenlabs buffered", "ulaw_in", len(frame), "pcm_out", len(pcm), "energy", energy, "buffered", bufLen, "flushing", shouldFlush)
 		}
 	}
 	if shouldFlush {

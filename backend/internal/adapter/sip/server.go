@@ -131,6 +131,7 @@ func NewServer(cfg Config, trunkSvc trunk.Service, callSvc call.Service, convoSv
 	srv.OnAck(s.handleAck)
 	srv.OnBye(s.handleBye)
 	srv.OnOptions(s.handleOptions)
+	srv.OnRegister(s.handleRegister)
 
 	return s, nil
 }
@@ -398,5 +399,12 @@ func (s *Server) handleBye(req *sip.Request, tx sip.ServerTransaction) {
 }
 
 func (s *Server) handleOptions(req *sip.Request, tx sip.ServerTransaction) {
+	_ = tx.Respond(sip.NewResponseFromRequest(req, sip.StatusOK, "OK", nil))
+}
+
+func (s *Server) handleRegister(req *sip.Request, tx sip.ServerTransaction) {
+	// AgentSIP is not a registrar — it resolves trunks by source IP or digest username on INVITE.
+	// Return 200 OK to keep softphones like Zoiper from retrying REGISTER forever.
+	// No registration state is kept; INVITE auth is still enforced in handleInvite.
 	_ = tx.Respond(sip.NewResponseFromRequest(req, sip.StatusOK, "OK", nil))
 }

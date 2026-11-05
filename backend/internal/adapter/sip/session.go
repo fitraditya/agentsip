@@ -117,10 +117,22 @@ func (a *rtpAudioIO) readLoop() {
 			continue
 		}
 
+		// Filter only PCMU (payload type 0). Drop comfort noise (CN, PT 13), DTMF (101), etc.
+		// Zoiper sends 1-byte CNG when silence suppression is on — that decodes as loud clipping (energy 32124) and breaks audio.
+		if pkt.PayloadType != rtpPayloadTypePCMU {
+			a.log.Debug().Int("payload_type", int(pkt.PayloadType)).Int("payload_bytes", len(pkt.Payload)).Msg("dropping non-PCMU RTP packet (CNG/DTMF)")
+			continue
+		}
+		if len(pkt.Payload) < 40 {
+			// CNG or malformed: PCMU 20ms = 160 bytes, anything <40 is not real audio
+			a.log.Debug().Int("payload_bytes", len(pkt.Payload)).Msg("dropping small RTP payload (likely CNG)")
+			continue
+		}
+
 		packetsReceived++
 		// Log first packet and every 50th to avoid spam, plus Debug for every
 		if packetsReceived == 1 || packetsReceived%250 == 0 {
-			a.log.Info().Int("payload_bytes", len(pkt.Payload)).Int("seq", int(pkt.SequenceNumber)).Int("total", int(packetsReceived)).Str("from", addr.String()).Msg("rtp packet received")
+			a.log.Info().Int("payload_bytes", len(pkt.Payload)).Int("payload_type", int(pkt.PayloadType)).Int("seq", int(pkt.SequenceNumber)).Int("total", int(packetsReceived)).Str("from", addr.String()).Msg("rtp packet received")
 		} else {
 			a.log.Debug().Int("payload_bytes", len(pkt.Payload)).Int("seq", int(pkt.SequenceNumber)).Msg("rtp packet received")
 		}

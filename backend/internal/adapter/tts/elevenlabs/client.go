@@ -39,7 +39,52 @@ const (
 	wsURLFmt            = "wss://api.elevenlabs.io/v1/text-to-speech/%s/stream-input"
 	defaultModel        = "eleven_flash_v2_5"
 	audioFormatULaw8000 = "ulaw_8000"
+	audioFormatPCM8000  = "pcm_8000"
 )
+
+// ulaw encode table for 14-bit to 8-bit conversion (simplified)
+// Using standard G.711 mu-law encode.
+func linearToUlaw(pcm int16) byte {
+	const (
+		bias = 0x84
+		clip = 32635
+	)
+
+	mu := 0
+	sign := byte(0)
+	if pcm < 0 {
+		pcm = -pcm
+		sign = 0x80
+	}
+
+	if pcm > clip {
+		pcm = clip
+	}
+	pcm += bias
+
+	mu = 0
+	// find exponent
+	exp := 7
+	for exp > 0 {
+		if pcm >= (1 << (exp + 3)) {
+			break
+		}
+		exp--
+	}
+	mantissa := (pcm >> (exp + 3)) & 0x0F
+	mu = (exp << 4) | int(mantissa)
+	return byte(^(mu | int(sign)))
+}
+
+func pcm16ToUlaw(pcm []byte) []byte {
+	// pcm is little-endian 16-bit mono
+	out := make([]byte, 0, len(pcm)/2)
+	for i := 0; i+1 < len(pcm); i += 2 {
+		s := int16(pcm[i]) | int16(pcm[i+1])<<8
+		out = append(out, linearToUlaw(s))
+	}
+	return out
+}
 
 type TTS struct {
 	debug bool
@@ -58,7 +103,9 @@ func (t *TTS) StartSession(ctx context.Context, cfg conversation.TTSSessionConfi
 
 	q := url.Values{}
 	q.Set("model_id", model)
-	q.Set("output_format", audioFormatULaw8000)
+	// Try pcm_8000 first, fallback to ulaw_8000 if server returns empty.
+	// pcm_8000 is natively 8k 16-bit, we transcode to ulaw for RTP.
+	q.Set("output_format", audioFormatPCM8000)
 
 	wsURL := fmt.Sprintf(wsURLFmt, url.PathEscape(cfg.VoiceID)) + "?" + q.Encode()
 	header := http.Header{"xi-api-key": []string{cfg.APIKey}}
@@ -129,12 +176,17 @@ func (s *session) readLoop() {
 			return
 		}
 		if s.debug {
-			slog.Info("TTS elevenlabs audio received", "isFinal", msg.IsFinal, "hasAudio", msg.Audio != "")
+			slog.Info("TTS elevenlabs audio received", "isFinal", msg.IsFinal, "hasAudio", msg.Audio != "", "audioLen", len(msg.Audio))
 		}
 		if msg.Audio != "" {
 			raw, err := base64.StdEncoding.DecodeString(msg.Audio)
 			if err == nil {
-				s.audio <- raw
+				// raw is PCM16 8k mono, transcode to ulaw for RTP
+				ulaw := pcm16ToUlaw(raw)
+				if s.debug {
+					slog.Info("TTS elevenlabs transcoded", "pcmBytes", len(raw), "ulawBytes", len(ulaw))
+				}
+				s.audio <- ulaw
 			}
 		}
 		if msg.IsFinal {

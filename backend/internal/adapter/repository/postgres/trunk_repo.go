@@ -150,8 +150,13 @@ func (r *TrunkRepository) Delete(ctx context.Context, id uuid.UUID) error {
 }
 
 func (r *TrunkRepository) FindByInboundMatch(ctx context.Context, match trunk.InboundMatch) (*domain.Trunk, error) {
+	// Wildcard support: empty allowed_ips, or containing "0.0.0.0/0" or "*" means allow any IP.
 	const q = selectTrunkColumns + `
-		WHERE ($1::text = '' OR $1::text = ANY(t.sip_allowed_ips))
+		WHERE (t.sip_allowed_ips = '{}'
+		       OR $1::text = ''
+		       OR '0.0.0.0/0' = ANY(t.sip_allowed_ips)
+		       OR '*' = ANY(t.sip_allowed_ips)
+		       OR $1::text = ANY(t.sip_allowed_ips))
 		   OR ($2::text <> '' AND t.sip_digest_username = $2)
 		LIMIT 1`
 	row := r.pool.QueryRow(ctx, q, match.SourceIP, match.DigestUsername)

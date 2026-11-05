@@ -47,12 +47,13 @@ const (
 	audioFormatPCM16 = "pcm_8000" // native 8k PCM, no upsample artifacts
 	// Legacy ulaw format kept for reference
 	audioFormatULaw8 = "ulaw_8000"
-	// Use 80ms flush (1280B) for liveness, commit after 0.3s (4800B @8k) minimum per ElevenLabs.
+	// Use 80ms flush (1280B) for liveness, commit after 0.6s (9600B) for more context.
+	// Short words like "check" need at least 0.3s, longer phrases like "good morning" need 0.6-1s.
 	flushBytes            = 1280
 	flushInterval         = 200 * time.Millisecond
-	minCommitBytes        = 4800 // 0.3s @8k PCM16, minimum required by ElevenLabs
-	manualCommitSilence   = 800 * time.Millisecond
-	speechEnergyThreshold = 300
+	minCommitBytes        = 9600 // 0.6s @8k PCM16, more context for accuracy
+	manualCommitSilence   = 1000 * time.Millisecond
+	speechEnergyThreshold = 150
 )
 
 // ulaw to linear PCM table generated from standard G.711 mu-law decode.

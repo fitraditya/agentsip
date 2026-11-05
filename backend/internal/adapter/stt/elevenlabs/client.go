@@ -44,11 +44,12 @@ const (
 	audioFormatPCM16 = "pcm_8000" // native 8k PCM, no upsample artifacts
 	// Legacy ulaw format kept for reference
 	audioFormatULaw8 = "ulaw_8000"
-	// 0.3s @8k mono 16-bit = 4800 bytes. Use 80ms flush (1280B) for liveness.
-	flushBytes          = 1280
-	flushInterval       = 200 * time.Millisecond
-	minCommitBytes      = 4800 // 0.3s minimum for commit_throttled guard @8k
-	manualCommitSilence = 800 * time.Millisecond
+	// 0.2s @8k mono 16-bit = 3200 bytes. Use 80ms flush (1280B) for liveness.
+	flushBytes            = 1280
+	flushInterval         = 200 * time.Millisecond
+	minCommitBytes        = 3200 // 0.2s minimum, need at least 0.3s per ElevenLabs but allow short words
+	manualCommitSilence   = 500 * time.Millisecond
+	speechEnergyThreshold = 200
 )
 
 // ulaw to linear PCM table generated from standard G.711 mu-law decode.
@@ -266,10 +267,10 @@ func (s *session) sendCommit() error {
 }
 
 func (s *session) SendAudio(frame []byte) error {
-	// frame is raw ulaw_8000 from RTP (20ms = 160 bytes). Transcode to pcm_16000 for better VAD.
+	// frame is raw ulaw_8000 from RTP (20ms = 160 bytes). Transcode to pcm_8000.
 	pcm := decodeUlawToPCM16(frame)
 	energy := pcmEnergy(pcm)
-	if energy > 800 {
+	if energy > speechEnergyThreshold {
 		s.bufMu.Lock()
 		s.lastHighEnergy = time.Now()
 		s.speechSeen = true

@@ -141,14 +141,17 @@ func (s *STT) StartSession(ctx context.Context, cfg conversation.STTSessionConfi
 	q := url.Values{}
 	q.Set("model_id", model)
 	q.Set("audio_format", audioFormatPCM16)
-	// Switch to manual: VAD was not firing even with energy 8k, and manual
-	// lets us control commit timing and avoid commit_throttled (needs 0.3s min).
 	q.Set("commit_strategy", "manual")
 	q.Set("vad_silence_threshold_secs", "0.5")
 	q.Set("vad_threshold", "0.2")
 	q.Set("min_speech_duration_ms", "50")
 	q.Set("keepalive_interval_ms", "1000")
 	q.Set("include_timestamps", "true")
+	// Force English — auto-detect was returning Russian "Да./Алло!" for English "hello/test"
+	// User reports speaking English but getting Russian. Set explicit language_code.
+	q.Set("language_code", "en")
+	// Optional: disable filtering that may cause empty commits
+	q.Set("no_verbatim", "false")
 
 	header := http.Header{"xi-api-key": []string{cfg.APIKey}}
 	conn, _, err := websocket.DefaultDialer.DialContext(ctx, wsURL+"?"+q.Encode(), header)

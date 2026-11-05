@@ -40,16 +40,14 @@ import (
 const (
 	wsURL            = "wss://api.elevenlabs.io/v1/speech-to-text/realtime"
 	defaultModel     = "scribe_v2_realtime"
-	sampleRateHz     = 16000
-	audioFormatPCM16 = "pcm_16000"
-	// Legacy ulaw format kept for reference but now we transcode to PCM.
+	sampleRateHz     = 8000
+	audioFormatPCM16 = "pcm_8000" // native 8k PCM, no upsample artifacts
+	// Legacy ulaw format kept for reference
 	audioFormatULaw8 = "ulaw_8000"
-	// Docs require at least 0.3s uncommitted before manual commit.
-	// But telephony with 2pps needs small flush to keep pipeline alive.
-	// Use 40ms min (1280 bytes) flush, accumulate for commit 0.3s.
+	// 0.3s @8k mono 16-bit = 4800 bytes. Use 80ms flush (1280B) for liveness.
 	flushBytes          = 1280
 	flushInterval       = 200 * time.Millisecond
-	minCommitBytes      = 9600 // 0.3s minimum for commit_throttled guard
+	minCommitBytes      = 4800 // 0.3s minimum for commit_throttled guard @8k
 	manualCommitSilence = 800 * time.Millisecond
 )
 
@@ -76,17 +74,28 @@ func ulawToLinear(ulaw byte) int16 {
 	return sample
 }
 
-// decodeUlawToPCM16 decodes mu-law bytes to little-endian 16-bit PCM, upsampling 8k->16k with linear interpolation.
+// decodeUlawToPCM16 decodes mu-law bytes to little-endian 16-bit PCM at 8k (native, no upsample).
 func decodeUlawToPCM16(ulaw []byte) []byte {
 	if len(ulaw) == 0 {
 		return nil
 	}
-	// first decode to int16 slice at 8k
+	out := make([]byte, 0, len(ulaw)*2)
+	for _, b := range ulaw {
+		s := ulawDecodeTable[b]
+		out = append(out, byte(s), byte(s>>8))
+	}
+	return out
+}
+
+// decodeUlawToPCM16_16k is the 8k->16k linear interpolation version (kept for testing pcm_16000 path).
+func decodeUlawToPCM16_16k(ulaw []byte) []byte {
+	if len(ulaw) == 0 {
+		return nil
+	}
 	decoded := make([]int16, len(ulaw))
 	for i, b := range ulaw {
 		decoded[i] = ulawDecodeTable[b]
 	}
-	// upsample to 16k: for each sample, output current and interpolated midpoint to next
 	out := make([]byte, 0, len(ulaw)*4)
 	for i := 0; i < len(decoded); i++ {
 		s0 := decoded[i]
@@ -97,10 +106,7 @@ func decodeUlawToPCM16(ulaw []byte) []byte {
 			s1 = s0
 		}
 		mid := int16((int32(s0) + int32(s1)) / 2)
-
-		// s0
 		out = append(out, byte(s0), byte(s0>>8))
-		// interpolated
 		out = append(out, byte(mid), byte(mid>>8))
 	}
 	return out

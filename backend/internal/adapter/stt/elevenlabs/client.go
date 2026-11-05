@@ -124,6 +124,9 @@ func (s *session) sendChunk(b []byte) error {
 	if len(b) == 0 {
 		return nil
 	}
+	if s.debug {
+		slog.Info("STT elevenlabs sendChunk", "bytes", len(b))
+	}
 	s.connMu.Lock()
 	defer s.connMu.Unlock()
 	return s.conn.WriteJSON(inputAudioChunk{
@@ -143,7 +146,14 @@ func (s *session) SendAudio(frame []byte) error {
 		toSend = append([]byte(nil), s.buf...)
 		s.buf = s.buf[:0]
 	}
+	bufLen := len(s.buf)
 	s.bufMu.Unlock()
+	if s.debug && len(frame) > 0 {
+		// log every 25 frames (5 sec) to avoid spam, but first one always
+		if bufLen < 200 || bufLen%4000 == 0 {
+			slog.Info("STT elevenlabs buffered", "incoming", len(frame), "buffered", bufLen, "flushing", shouldFlush)
+		}
+	}
 	if shouldFlush {
 		return s.sendChunk(toSend)
 	}
@@ -162,7 +172,13 @@ func (s *session) flushLoop() {
 		toSend := append([]byte(nil), s.buf...)
 		s.buf = s.buf[:0]
 		s.bufMu.Unlock()
+		if s.debug {
+			slog.Info("STT elevenlabs flushLoop sending", "bytes", len(toSend))
+		}
 		if err := s.sendChunk(toSend); err != nil {
+			if s.debug {
+				slog.Info("STT elevenlabs flushLoop send error", "err", err)
+			}
 			return
 		}
 	}

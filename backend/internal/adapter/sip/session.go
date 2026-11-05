@@ -96,22 +96,38 @@ func (a *rtpAudioIO) getRemote() *net.UDPAddr {
 // address/port than they offered.
 func (a *rtpAudioIO) readLoop() {
 	buf := make([]byte, 1500)
+	var packetsReceived uint64
 	for {
 		n, addr, err := a.conn.ReadFromUDP(buf)
 		if err != nil {
+			a.log.Info().Err(err).Msg("rtp read error, closing hangup")
 			a.closeHangup()
 			return
 		}
+		prevRemote := a.getRemote()
+		isNewRemote := prevRemote == nil || prevRemote.String() != addr.String()
 		a.setRemote(addr)
+		if isNewRemote {
+			a.log.Info().Str("remote", addr.String()).Msg("rtp learned remote")
+		}
 
 		var pkt rtp.Packet
 		if err := pkt.Unmarshal(buf[:n]); err != nil {
-			a.log.Warn().Err(err).Msg("dropping non-RTP packet")
+			a.log.Warn().Err(err).Int("bytes", n).Str("from", addr.String()).Msg("dropping non-RTP packet")
 			continue
+		}
+
+		packetsReceived++
+		// Log first packet and every 50th to avoid spam, plus Debug for every
+		if packetsReceived == 1 || packetsReceived%250 == 0 {
+			a.log.Info().Int("payload_bytes", len(pkt.Payload)).Int("seq", int(pkt.SequenceNumber)).Int("total", int(packetsReceived)).Str("from", addr.String()).Msg("rtp packet received")
+		} else {
+			a.log.Debug().Int("payload_bytes", len(pkt.Payload)).Int("seq", int(pkt.SequenceNumber)).Msg("rtp packet received")
 		}
 
 		select {
 		case a.in <- pkt.Payload:
+			a.log.Debug().Int("payload_bytes", len(pkt.Payload)).Msg("rtp forwarded to STT pipeline")
 		default:
 			// The conversation pipeline (ultimately, an STT websocket) isn't
 			// keeping up. Dropping this frame is better than blocking the

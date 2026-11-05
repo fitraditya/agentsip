@@ -58,13 +58,22 @@ func (s *Service) Run(ctx context.Context, cfg RunConfig, io AudioIO) error {
 	pumpCtx, pumpCancel := context.WithCancel(ctx)
 	defer pumpCancel()
 	go func() {
+		var framesForwarded uint64
 		for {
 			select {
 			case frame, ok := <-io.In():
 				if !ok {
+					s.log.Info().Msg("conversation pump: In() channel closed")
 					return
 				}
+				framesForwarded++
+				if framesForwarded == 1 || framesForwarded%250 == 0 {
+					s.log.Info().Int("frame_bytes", len(frame)).Int("total", int(framesForwarded)).Msg("conversation pump: forwarding audio to STT")
+				} else {
+					s.log.Debug().Int("frame_bytes", len(frame)).Msg("conversation pump: forwarding audio to STT")
+				}
 				if err := sttSess.SendAudio(frame); err != nil {
+					s.log.Warn().Err(err).Msg("conversation pump: SendAudio failed, stopping pump")
 					return
 				}
 			case <-pumpCtx.Done():

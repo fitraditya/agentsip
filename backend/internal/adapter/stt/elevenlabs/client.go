@@ -44,10 +44,10 @@ const (
 	audioFormatPCM16 = "pcm_16000"
 	// Legacy ulaw format kept for reference but now we transcode to PCM.
 	audioFormatULaw8 = "ulaw_8000"
-	// 200ms of 16kHz 16-bit PCM = 32000 bytes/sec * 0.2 = 6400 bytes.
-	// Docs recommend 0.1-1s chunks. We buffer decoded PCM and flush 200ms batches.
-	flushBytes    = 6400
-	flushInterval = 200 * time.Millisecond
+	// 100ms of 16kHz 16-bit PCM = 3200 bytes. Docs recommend 0.1-1s chunks.
+	// We buffer decoded PCM and flush at least 100ms batches, but up to 500ms max delay.
+	flushBytes    = 3200
+	flushInterval = 500 * time.Millisecond
 )
 
 // ulaw to linear PCM table generated from standard G.711 mu-law decode.
@@ -73,17 +73,32 @@ func ulawToLinear(ulaw byte) int16 {
 	return sample
 }
 
-// decodeUlawToPCM16 decodes mu-law bytes to little-endian 16-bit PCM, upsampling 8k->16k by duplication.
+// decodeUlawToPCM16 decodes mu-law bytes to little-endian 16-bit PCM, upsampling 8k->16k with linear interpolation.
 func decodeUlawToPCM16(ulaw []byte) []byte {
-	// each ulaw byte -> one 8k sample -> two 16k samples (dup) -> 4 bytes PCM16
+	if len(ulaw) == 0 {
+		return nil
+	}
+	// first decode to int16 slice at 8k
+	decoded := make([]int16, len(ulaw))
+	for i, b := range ulaw {
+		decoded[i] = ulawDecodeTable[b]
+	}
+	// upsample to 16k: for each sample, output current and interpolated midpoint to next
 	out := make([]byte, 0, len(ulaw)*4)
-	for _, b := range ulaw {
-		s := ulawDecodeTable[b]
-		// little endian
-		lo := byte(s)
-		hi := byte(s >> 8)
-		// dup for 8k->16k
-		out = append(out, lo, hi, lo, hi)
+	for i := 0; i < len(decoded); i++ {
+		s0 := decoded[i]
+		var s1 int16
+		if i+1 < len(decoded) {
+			s1 = decoded[i+1]
+		} else {
+			s1 = s0
+		}
+		mid := int16((int32(s0) + int32(s1)) / 2)
+
+		// s0
+		out = append(out, byte(s0), byte(s0>>8))
+		// interpolated
+		out = append(out, byte(mid), byte(mid>>8))
 	}
 	return out
 }
@@ -124,15 +139,17 @@ func (s *STT) StartSession(ctx context.Context, cfg conversation.STTSessionConfi
 	q.Set("model_id", model)
 	q.Set("audio_format", audioFormatPCM16)
 	q.Set("commit_strategy", "vad")
-	// VAD tuning for telephony: faster commit, avoid long empty segments.
-	q.Set("vad_silence_threshold_secs", "0.8")
-	q.Set("vad_threshold", "0.4")
+	// VAD tuning for telephony: more sensitive than default.
+	// Previous 0.4 still missed speech with energy 8k. Try 0.2 and faster silence.
+	q.Set("vad_silence_threshold_secs", "0.5")
+	q.Set("vad_threshold", "0.2")
+	q.Set("min_speech_duration_ms", "50")
 	// keepalive prevents server closing after 15s with no client msgs
 	// (happens during silence when no RTP arrives). Empty partials from
 	// keepalive are filtered in conversation/service.go.
 	q.Set("keepalive_interval_ms", "1000")
-	// lower min speech to catch short utterances over telephony
-	q.Set("min_speech_duration_ms", "100")
+	// include timestamps helps debugging, also enables word-level
+	q.Set("include_timestamps", "true")
 
 	header := http.Header{"xi-api-key": []string{cfg.APIKey}}
 	conn, _, err := websocket.DefaultDialer.DialContext(ctx, wsURL+"?"+q.Encode(), header)
@@ -180,6 +197,8 @@ type session struct {
 
 	bufMu sync.Mutex
 	buf   []byte
+
+	lastHighEnergy time.Time
 }
 
 func (s *session) sendChunk(b []byte) error {
@@ -199,12 +218,38 @@ func (s *session) sendChunk(b []byte) error {
 	})
 }
 
+func (s *session) sendCommit() error {
+	if s.debug {
+		slog.Info("STT elevenlabs sendCommit manual")
+	}
+	s.connMu.Lock()
+	defer s.connMu.Unlock()
+	return s.conn.WriteJSON(inputAudioChunk{
+		MessageType: "input_audio_chunk",
+		AudioBase64: "",
+		Commit:      true,
+		SampleRate:  sampleRateHz,
+	})
+}
+
 func (s *session) SendAudio(frame []byte) error {
 	// frame is raw ulaw_8000 from RTP (20ms = 160 bytes). Transcode to pcm_16000 for better VAD.
 	pcm := decodeUlawToPCM16(frame)
 	energy := 0
 	if s.debug {
 		energy = pcmEnergy(pcm)
+		if energy > 1000 {
+			s.bufMu.Lock()
+			s.lastHighEnergy = time.Now()
+			s.bufMu.Unlock()
+		}
+	} else {
+		// still track without debug for commit logic, using same threshold
+		if pcmEnergy(pcm) > 1000 {
+			s.bufMu.Lock()
+			s.lastHighEnergy = time.Now()
+			s.bufMu.Unlock()
+		}
 	}
 
 	s.bufMu.Lock()
@@ -234,21 +279,37 @@ func (s *session) flushLoop() {
 	defer ticker.Stop()
 	for range ticker.C {
 		s.bufMu.Lock()
-		if len(s.buf) == 0 {
-			s.bufMu.Unlock()
-			continue
+		hasBuf := len(s.buf) > 0
+		var toSend []byte
+		if hasBuf {
+			toSend = append([]byte(nil), s.buf...)
+			s.buf = s.buf[:0]
 		}
-		toSend := append([]byte(nil), s.buf...)
-		s.buf = s.buf[:0]
+		lastHigh := s.lastHighEnergy
 		s.bufMu.Unlock()
-		if s.debug {
-			slog.Info("STT elevenlabs flushLoop sending", "bytes", len(toSend))
-		}
-		if err := s.sendChunk(toSend); err != nil {
+
+		if hasBuf {
 			if s.debug {
-				slog.Info("STT elevenlabs flushLoop send error", "err", err)
+				slog.Info("STT elevenlabs flushLoop sending", "bytes", len(toSend))
 			}
-			return
+			if err := s.sendChunk(toSend); err != nil {
+				if s.debug {
+					slog.Info("STT elevenlabs flushLoop send error", "err", err)
+				}
+				return
+			}
+		}
+
+		// Manual commit fallback: if we had speech and then 800ms silence, force commit to get transcript
+		if !lastHigh.IsZero() && time.Since(lastHigh) > 800*time.Millisecond {
+			s.bufMu.Lock()
+			// clear to avoid repeated commits
+			s.lastHighEnergy = time.Time{}
+			s.bufMu.Unlock()
+			if s.debug {
+				slog.Info("STT elevenlabs commit after silence")
+			}
+			_ = s.sendCommit()
 		}
 	}
 }

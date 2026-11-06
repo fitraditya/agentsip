@@ -113,10 +113,11 @@ type Config struct {
 	PublicBaseURL string `env:"PUBLIC_BASE_URL"`
 
 	// STT tuning for high-latency VPS (Indonesia -> US). Defaults are for
-	// APAC high-latency; US VPS can use larger values for better accuracy.
+	// APAC high-latency with async writer; minimum 4800B (0.3s) required by
+	// ElevenLabs else commit_throttled. US VPS can use larger values.
 	STTFlushBytes          int           `env:"STT_FLUSH_BYTES" envDefault:"320"`
 	STTFlushInterval       time.Duration `env:"STT_FLUSH_INTERVAL" envDefault:"80ms"`
-	STTMinCommitBytes      int           `env:"STT_MIN_COMMIT_BYTES" envDefault:"640"`
+	STTMinCommitBytes      int           `env:"STT_MIN_COMMIT_BYTES" envDefault:"4800"`
 	STTManualCommitSilence time.Duration `env:"STT_COMMIT_SILENCE" envDefault:"500ms"`
 	STTSpeechThreshold     int           `env:"STT_SPEECH_THRESHOLD" envDefault:"150"`
 }

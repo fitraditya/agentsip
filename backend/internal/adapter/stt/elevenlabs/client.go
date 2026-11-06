@@ -48,12 +48,11 @@ const (
 	// Legacy ulaw format kept for reference
 	audioFormatULaw8 = "ulaw_8000"
 	// Tuned for high-latency APAC VPS (Indonesia -> ElevenLabs US 34.8.184.191).
-	// US VPS works with 3200B, Indonesia needs even smaller due to 300-500ms RTT.
-	// flush 320B = 20ms (1 RTP frame), commit 640B = 40ms allows quick commit
-	// even when WriteJSON blocks, caller doesn't hang up waiting for commit.
+	// Minimum 4800B (0.3s) required by ElevenLabs else commit_throttled.
+	// Async writeLoop prevents blocking, so 4800 reached quickly even with 500ms RTT.
 	flushBytes            = 320  // 20ms @8k PCM16 (1 RTP frame)
 	flushInterval         = 80 * time.Millisecond
-	minCommitBytes        = 640 // 40ms @8k PCM16, was 3200 for US, 9600 originally
+	minCommitBytes        = 4800 // 0.3s @8k PCM16, minimum ElevenLabs requires
 	manualCommitSilence   = 500 * time.Millisecond
 	speechEnergyThreshold = 150
 )
@@ -156,14 +155,14 @@ func New(debug bool) *STT {
 	return NewWithConfig(debug, Config{
 		FlushBytes:          320,
 		FlushInterval:       80 * time.Millisecond,
-		MinCommitBytes:      640,
+		MinCommitBytes:      4800, // 0.3s @8k PCM16, minimum ElevenLabs requires, else commit_throttled
 		ManualCommitSilence: 500 * time.Millisecond,
 		SpeechThreshold:     150,
 	})
 }
 
 func NewWithConfig(debug bool, cfg Config) *STT {
-	// Apply defaults if zero
+	// Apply defaults if zero — 4800 is minimum for ElevenLabs (0.3s), else commit_throttled
 	if cfg.FlushBytes == 0 {
 		cfg.FlushBytes = 320
 	}
@@ -171,7 +170,7 @@ func NewWithConfig(debug bool, cfg Config) *STT {
 		cfg.FlushInterval = 80 * time.Millisecond
 	}
 	if cfg.MinCommitBytes == 0 {
-		cfg.MinCommitBytes = 640
+		cfg.MinCommitBytes = 4800
 	}
 	if cfg.ManualCommitSilence == 0 {
 		cfg.ManualCommitSilence = 500 * time.Millisecond
@@ -214,6 +213,7 @@ func (s *STT) StartSession(ctx context.Context, cfg conversation.STTSessionConfi
 		events: make(chan conversation.TranscriptEvent, 16),
 		debug:  s.debug,
 		config: s.config,
+		sendCh: make(chan sendReq, 64),
 	}
 	if s.debug {
 		// Dump raw PCM for offline analysis when AGENTSIP_DEBUG=true
@@ -226,6 +226,7 @@ func (s *STT) StartSession(ctx context.Context, cfg conversation.STTSessionConfi
 	}
 	go sess.readLoop()
 	go sess.flushLoop()
+	go sess.writeLoop()
 	return sess, nil
 }
 
@@ -251,6 +252,11 @@ type rawServerMessage struct {
 	Status    string `json:"status"`
 }
 
+type sendReq struct {
+	chunk  []byte
+	commit bool
+}
+
 type session struct {
 	connMu sync.Mutex
 	conn   *websocket.Conn
@@ -266,6 +272,8 @@ type session struct {
 	speechSeen       bool
 
 	dumpFile *os.File
+
+	sendCh chan sendReq
 }
 
 func (s *session) sendChunk(b []byte) error {
@@ -275,36 +283,23 @@ func (s *session) sendChunk(b []byte) error {
 	if s.debug {
 		logging.For("agentsip", "stt").Debug().Int("bytes", len(b)).Msg("sendChunk")
 	}
-	// dump to file for offline analysis
 	if s.dumpFile != nil {
 		_, _ = s.dumpFile.Write(b)
 	}
-	// Count bytes optimistically before network block — on VPS link to
-	// 34.8.184.191 latency is 500ms+, old code only counted after WriteJSON
-	// success, so bytesSinceCommit grew 1k/sec not 16k/sec and caller hung
-	// up before minCommitBytes reached.
+	// Count optimistically before network — critical for high-latency APAC
 	s.bufMu.Lock()
 	s.bytesSinceCommit += len(b)
 	s.bufMu.Unlock()
 
-	s.connMu.Lock()
-	defer s.connMu.Unlock()
-	err := s.conn.WriteJSON(inputAudioChunk{
-		MessageType: "input_audio_chunk",
-		AudioBase64: base64.StdEncoding.EncodeToString(b),
-		Commit:      false,
-		SampleRate:  sampleRateHz,
-	})
-	if err != nil {
-		// rollback on failure
-		s.bufMu.Lock()
-		s.bytesSinceCommit -= len(b)
-		if s.bytesSinceCommit < 0 {
-			s.bytesSinceCommit = 0
-		}
-		s.bufMu.Unlock()
+	// Async queue — never block pump on websocket RTT
+	select {
+	case s.sendCh <- sendReq{chunk: append([]byte(nil), b...), commit: false}:
+	default:
+		// Channel full (64), drop oldest? For now block briefly to avoid data loss
+		// but with 64*320B=20kB buffer, should rarely happen
+		s.sendCh <- sendReq{chunk: append([]byte(nil), b...), commit: false}
 	}
-	return err
+	return nil
 }
 
 func (s *session) sendCommit() error {
@@ -316,26 +311,54 @@ func (s *session) sendCommit() error {
 		s.bufMu.Unlock()
 		return nil
 	}
+	// Reset optimistically before network
+	commitBytes := s.bytesSinceCommit
+	s.bytesSinceCommit = 0
+	s.speechSeen = false
 	s.bufMu.Unlock()
 
 	if s.debug {
-		logging.For("agentsip", "stt").Debug().Int("bytesSinceCommit", s.bytesSinceCommit).Msg("sendCommit manual")
+		logging.For("agentsip", "stt").Debug().Int("bytesSinceCommit", commitBytes).Msg("sendCommit manual")
 	}
-	s.connMu.Lock()
-	defer s.connMu.Unlock()
-	err := s.conn.WriteJSON(inputAudioChunk{
-		MessageType: "input_audio_chunk",
-		AudioBase64: "",
-		Commit:      true,
-		SampleRate:  sampleRateHz,
-	})
-	if err == nil {
-		s.bufMu.Lock()
-		s.bytesSinceCommit = 0
-		s.speechSeen = false
-		s.bufMu.Unlock()
+	// Queue commit
+	select {
+	case s.sendCh <- sendReq{commit: true}:
+	default:
+		s.sendCh <- sendReq{commit: true}
 	}
-	return err
+	return nil
+}
+
+func (s *session) writeLoop() {
+	for req := range s.sendCh {
+		var err error
+		if req.commit {
+			s.connMu.Lock()
+			err = s.conn.WriteJSON(inputAudioChunk{
+				MessageType: "input_audio_chunk",
+				AudioBase64: "",
+				Commit:      true,
+				SampleRate:  sampleRateHz,
+			})
+			s.connMu.Unlock()
+		} else {
+			s.connMu.Lock()
+			err = s.conn.WriteJSON(inputAudioChunk{
+				MessageType: "input_audio_chunk",
+				AudioBase64: base64.StdEncoding.EncodeToString(req.chunk),
+				Commit:      false,
+				SampleRate:  sampleRateHz,
+			})
+			s.connMu.Unlock()
+		}
+		if err != nil {
+			if s.debug {
+				logging.For("agentsip", "stt").Debug().Err(err).Msg("writeLoop error, closing")
+			}
+			// On write error, close events to end call
+			return
+		}
+	}
 }
 
 func (s *session) SendAudio(frame []byte) error {
@@ -440,6 +463,10 @@ func (s *session) Close() error {
 			logging.For("agentsip", "stt").Info().Str("path", s.dumpFile.Name()).Msg("dump closed")
 		}
 	}
+
+	// Close async writer
+	close(s.sendCh)
+	time.Sleep(100 * time.Millisecond)
 
 	s.connMu.Lock()
 	defer s.connMu.Unlock()

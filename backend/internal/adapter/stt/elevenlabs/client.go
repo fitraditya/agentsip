@@ -281,7 +281,7 @@ func (s *session) sendChunk(b []byte) error {
 		return nil
 	}
 	if s.debug {
-		logging.For("agentsip", "stt").Debug().Int("bytes", len(b)).Msg("sendChunk")
+		logging.For("agentsip", "stt").Trace().Int("bytes", len(b)).Msg("sendChunk")
 	}
 	if s.dumpFile != nil {
 		_, _ = s.dumpFile.Write(b)

@@ -51,10 +51,15 @@ const (
 const redacted = "[redacted]"
 
 var parameterMode = ParametersOff
+var currentLevel golog.Level = golog.InfoLevel
+var traceVerbose bool // true when LOG_LEVEL=4/trace for per-packet RTP spam
 
 // Configure sets up the shared logger. Called once at startup.
 func Configure(level string, jsonFormat bool, params ParameterMode) {
-	golog.SetLevel(parseLevel(level))
+	currentLevel = parseLevel(level)
+	// level 4 / trace enables per-packet spam
+	traceVerbose = isTraceLevel(level)
+	golog.SetLevel(currentLevel)
 	if jsonFormat {
 		golog.SetFormat(golog.JSONFormat)
 	} else {
@@ -67,17 +72,47 @@ func Configure(level string, jsonFormat bool, params ParameterMode) {
 // all. Call sites check it before doing work purely to build a debug field.
 func ParametersEnabled() bool { return parameterMode != ParametersOff }
 
+// IsTraceEnabled reports whether per-packet verbose logs should be emitted (level 4/trace)
+func IsTraceEnabled() bool { return traceVerbose }
+
+func isTraceLevel(level string) bool {
+	switch strings.ToLower(strings.TrimSpace(level)) {
+	case "4", "trace", "5":
+		return true
+	default:
+		return false
+	}
+}
+
 func parseLevel(level string) golog.Level {
-	switch strings.ToLower(level) {
-	case "trace", "debug":
+	switch strings.ToLower(strings.TrimSpace(level)) {
+	case "4", "trace":
+		return golog.DebugLevel // most verbose, includes trace
+	case "3", "debug":
 		return golog.DebugLevel
-	case "warn", "warning":
+	case "1", "warn", "warning":
 		return golog.WarnLevel
-	case "error":
+	case "0", "error":
 		return golog.ErrorLevel
 	case "fatal":
 		return golog.FatalLevel
+	case "2", "info", "":
+		fallthrough
 	default:
+		// numeric 2 or info or empty defaults to info
+		// numeric handling: 0=error,1=warn,2=info,3=debug,4=trace
+		switch level {
+		case "0":
+			return golog.ErrorLevel
+		case "1":
+			return golog.WarnLevel
+		case "2":
+			return golog.InfoLevel
+		case "3":
+			return golog.DebugLevel
+		case "4":
+			return golog.DebugLevel
+		}
 		return golog.InfoLevel
 	}
 }
@@ -132,6 +167,12 @@ func (l Logger) With(key string, value any) Logger {
 	return Logger{entry: l.base().WithField(key, value)}
 }
 
+func (l Logger) Trace() *Event {
+	if !traceVerbose {
+		return nil
+	}
+	return newEvent(l.base(), logrus.DebugLevel)
+}
 func (l Logger) Debug() *Event { return newEvent(l.base(), logrus.DebugLevel) }
 func (l Logger) Info() *Event  { return newEvent(l.base(), logrus.InfoLevel) }
 func (l Logger) Warn() *Event  { return newEvent(l.base(), logrus.WarnLevel) }

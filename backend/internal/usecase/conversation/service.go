@@ -102,7 +102,7 @@ func (s *Service) Run(ctx context.Context, cfg RunConfig, io AudioIO) error {
 				if framesForwarded == 1 || framesForwarded%250 == 0 {
 					s.log.Info().Int("frame_bytes", len(frame)).Int("total", int(framesForwarded)).Msg("conversation pump: forwarding audio to STT")
 				} else {
-					s.log.Debug().Int("frame_bytes", len(frame)).Msg("conversation pump: forwarding audio to STT")
+					s.log.Trace().Int("frame_bytes", len(frame)).Msg("conversation pump: forwarding audio to STT")
 				}
 				if err := sttSess.SendAudio(frame); err != nil {
 					s.log.Warn().Err(err).Msg("conversation pump: SendAudio failed, stopping pump")

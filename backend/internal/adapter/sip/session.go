@@ -130,16 +130,16 @@ func (a *rtpAudioIO) readLoop() {
 		}
 
 		packetsReceived++
-		// Log first packet and every 50th to avoid spam, plus Debug for every
+		// Log first packet and every 250th at Info, rest at Trace (level 4) to avoid spam
 		if packetsReceived == 1 || packetsReceived%250 == 0 {
 			a.log.Info().Int("payload_bytes", len(pkt.Payload)).Int("payload_type", int(pkt.PayloadType)).Int("seq", int(pkt.SequenceNumber)).Int("total", int(packetsReceived)).Str("from", addr.String()).Msg("rtp packet received")
 		} else {
-			a.log.Debug().Int("payload_bytes", len(pkt.Payload)).Int("seq", int(pkt.SequenceNumber)).Msg("rtp packet received")
+			a.log.Trace().Int("payload_bytes", len(pkt.Payload)).Int("seq", int(pkt.SequenceNumber)).Msg("rtp packet received")
 		}
 
 		select {
 		case a.in <- pkt.Payload:
-			a.log.Debug().Int("payload_bytes", len(pkt.Payload)).Msg("rtp forwarded to STT pipeline")
+			a.log.Trace().Int("payload_bytes", len(pkt.Payload)).Msg("rtp forwarded to STT pipeline")
 		default:
 			// The conversation pipeline (ultimately, an STT websocket) isn't
 			// keeping up. Dropping this frame is better than blocking the

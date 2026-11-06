@@ -111,6 +111,14 @@ type Config struct {
 	// behave identically either way, this only changes what the email looks
 	// like.
 	PublicBaseURL string `env:"PUBLIC_BASE_URL"`
+
+	// STT tuning for high-latency VPS (Indonesia -> US). Defaults are for
+	// APAC high-latency; US VPS can use larger values for better accuracy.
+	STTFlushBytes          int           `env:"STT_FLUSH_BYTES" envDefault:"320"`
+	STTFlushInterval       time.Duration `env:"STT_FLUSH_INTERVAL" envDefault:"80ms"`
+	STTMinCommitBytes      int           `env:"STT_MIN_COMMIT_BYTES" envDefault:"640"`
+	STTManualCommitSilence time.Duration `env:"STT_COMMIT_SILENCE" envDefault:"500ms"`
+	STTSpeechThreshold     int           `env:"STT_SPEECH_THRESHOLD" envDefault:"150"`
 }
 
 // VectorStoreDSN returns VectorStoreDatabaseURL, falling back to DatabaseURL

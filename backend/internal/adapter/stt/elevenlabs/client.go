@@ -139,11 +139,48 @@ func pcmEnergy(pcm []byte) int {
 	return int(sum / count)
 }
 
-type STT struct {
-	debug bool
+type Config struct {
+	FlushBytes          int
+	FlushInterval       time.Duration
+	MinCommitBytes      int
+	ManualCommitSilence time.Duration
+	SpeechThreshold     int
 }
 
-func New(debug bool) *STT { return &STT{debug: debug} }
+type STT struct {
+	debug  bool
+	config Config
+}
+
+func New(debug bool) *STT {
+	return NewWithConfig(debug, Config{
+		FlushBytes:          320,
+		FlushInterval:       80 * time.Millisecond,
+		MinCommitBytes:      640,
+		ManualCommitSilence: 500 * time.Millisecond,
+		SpeechThreshold:     150,
+	})
+}
+
+func NewWithConfig(debug bool, cfg Config) *STT {
+	// Apply defaults if zero
+	if cfg.FlushBytes == 0 {
+		cfg.FlushBytes = 320
+	}
+	if cfg.FlushInterval == 0 {
+		cfg.FlushInterval = 80 * time.Millisecond
+	}
+	if cfg.MinCommitBytes == 0 {
+		cfg.MinCommitBytes = 640
+	}
+	if cfg.ManualCommitSilence == 0 {
+		cfg.ManualCommitSilence = 500 * time.Millisecond
+	}
+	if cfg.SpeechThreshold == 0 {
+		cfg.SpeechThreshold = 150
+	}
+	return &STT{debug: debug, config: cfg}
+}
 
 func (s *STT) StartSession(ctx context.Context, cfg conversation.STTSessionConfig) (conversation.STTSession, error) {
 	model := cfg.Model
@@ -176,6 +213,7 @@ func (s *STT) StartSession(ctx context.Context, cfg conversation.STTSessionConfi
 		conn:   conn,
 		events: make(chan conversation.TranscriptEvent, 16),
 		debug:  s.debug,
+		config: s.config,
 	}
 	if s.debug {
 		// Dump raw PCM for offline analysis when AGENTSIP_DEBUG=true
@@ -218,6 +256,7 @@ type session struct {
 	conn   *websocket.Conn
 	events chan conversation.TranscriptEvent
 	debug  bool
+	config Config
 
 	bufMu sync.Mutex
 	buf   []byte
@@ -270,9 +309,9 @@ func (s *session) sendChunk(b []byte) error {
 
 func (s *session) sendCommit() error {
 	s.bufMu.Lock()
-	if s.bytesSinceCommit < minCommitBytes {
+	if s.bytesSinceCommit < s.config.MinCommitBytes {
 		if s.debug {
-			logging.For("agentsip", "stt").Debug().Int("bytes", s.bytesSinceCommit).Int("need", minCommitBytes).Msg("commit skipped, not enough audio")
+			logging.For("agentsip", "stt").Debug().Int("bytes", s.bytesSinceCommit).Int("need", s.config.MinCommitBytes).Msg("commit skipped, not enough audio")
 		}
 		s.bufMu.Unlock()
 		return nil
@@ -303,7 +342,7 @@ func (s *session) SendAudio(frame []byte) error {
 	// frame is raw ulaw_8000 from RTP (20ms = 160 bytes). Transcode to pcm_8000.
 	pcm := decodeUlawToPCM16(frame)
 	energy := pcmEnergy(pcm)
-	if energy > speechEnergyThreshold {
+	if energy > s.config.SpeechThreshold {
 		s.bufMu.Lock()
 		s.lastHighEnergy = time.Now()
 		s.speechSeen = true
@@ -312,7 +351,7 @@ func (s *session) SendAudio(frame []byte) error {
 
 	s.bufMu.Lock()
 	s.buf = append(s.buf, pcm...)
-	shouldFlush := len(s.buf) >= flushBytes
+	shouldFlush := len(s.buf) >= s.config.FlushBytes
 	var toSend []byte
 	if shouldFlush {
 		toSend = append([]byte(nil), s.buf...)
@@ -327,7 +366,7 @@ func (s *session) SendAudio(frame []byte) error {
 }
 
 func (s *session) flushLoop() {
-	ticker := time.NewTicker(flushInterval)
+	ticker := time.NewTicker(s.config.FlushInterval)
 	defer ticker.Stop()
 	for range ticker.C {
 		s.bufMu.Lock()
@@ -353,8 +392,8 @@ func (s *session) flushLoop() {
 
 		// Manual commit: if we saw speech and then silence, commit.
 		// Need at least 0.3s audio else ElevenLabs returns commit_throttled.
-		if hasSpeech && !lastHigh.IsZero() && time.Since(lastHigh) > manualCommitSilence {
-			if bytesSinceCommit >= minCommitBytes {
+		if hasSpeech && !lastHigh.IsZero() && time.Since(lastHigh) > s.config.ManualCommitSilence {
+			if bytesSinceCommit >= s.config.MinCommitBytes {
 				s.bufMu.Lock()
 				s.lastHighEnergy = time.Time{}
 				s.bufMu.Unlock()
@@ -387,7 +426,7 @@ func (s *session) Close() error {
 
 	// Final commit on hangup to ensure last utterance is transcribed,
 	// even if silence threshold not yet reached. Only if we saw speech.
-	if hasSpeech && bytesSince+len(leftover) >= minCommitBytes {
+	if hasSpeech && bytesSince+len(leftover) >= s.config.MinCommitBytes {
 		if s.debug {
 			logging.For("agentsip", "stt").Info().Int("bytes", bytesSince+len(leftover)).Msg("final commit on close")
 		}

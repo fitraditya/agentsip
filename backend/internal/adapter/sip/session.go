@@ -104,12 +104,6 @@ func (a *rtpAudioIO) readLoop() {
 			a.closeHangup()
 			return
 		}
-		prevRemote := a.getRemote()
-		isNewRemote := prevRemote == nil || prevRemote.String() != addr.String()
-		a.setRemote(addr)
-		if isNewRemote {
-			a.log.Info().Str("remote", addr.String()).Msg("rtp learned remote")
-		}
 
 		var pkt rtp.Packet
 		if err := pkt.Unmarshal(buf[:n]); err != nil {
@@ -127,6 +121,15 @@ func (a *rtpAudioIO) readLoop() {
 			// CNG or malformed: PCMU 20ms = 160 bytes, anything <40 is not real audio
 			a.log.Debug().Int("payload_bytes", len(pkt.Payload)).Msg("dropping small RTP payload (likely CNG)")
 			continue
+		}
+
+		// Learn remote only from valid PCMU packets, not from STUN/CNG/non-RTP
+		// that would otherwise hijack outbound audio to wrong IP.
+		prevRemote := a.getRemote()
+		isNewRemote := prevRemote == nil || prevRemote.String() != addr.String()
+		a.setRemote(addr)
+		if isNewRemote {
+			a.log.Info().Str("remote", addr.String()).Msg("rtp learned remote")
 		}
 
 		packetsReceived++

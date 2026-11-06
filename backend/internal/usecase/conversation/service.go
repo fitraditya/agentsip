@@ -254,6 +254,10 @@ func (s *Service) speakFixedText(ctx context.Context, cfg RunConfig, io AudioIO,
 	if err := ttsSess.SendText("", true); err != nil {
 		return fmt.Errorf("conversation: tts flush greeting: %w", err)
 	}
+	// Empty close to get isFinal true, otherwise server waits 20s and times out
+	if err := ttsSess.SendText("", false); err != nil {
+		return fmt.Errorf("conversation: tts close greeting: %w", err)
+	}
 	<-audioDone
 	return nil
 }
@@ -388,6 +392,10 @@ func (s *Service) respond(ctx context.Context, cfg RunConfig, io AudioIO, messag
 
 	if err := ttsSess.SendText("", true); err != nil {
 		return "", fmt.Errorf("conversation: flush tts: %w", err)
+	}
+	// Empty close to get isFinal true, otherwise server waits 20s and times out
+	if err := ttsSess.SendText("", false); err != nil {
+		return "", fmt.Errorf("conversation: close tts: %w", err)
 	}
 	return assistantText.String(), nil
 }

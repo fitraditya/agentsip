@@ -176,7 +176,7 @@ func TestRun_BasicTurn(t *testing.T) {
 	deadline = time.After(2 * time.Second)
 	for {
 		log := tts.textLog()
-		if len(log) >= 5 && log[len(log)-1] == "" {
+		if len(log) >= 7 && log[len(log)-1] == "" {
 			break
 		}
 		select {
@@ -187,7 +187,8 @@ func TestRun_BasicTurn(t *testing.T) {
 	}
 
 	got := tts.textLog()
-	want := []string{"Hi, I'm AgentSIP. How can I help you today?", "", "Hi", " there", ""}
+	// New flow: greeting text, flush "", close "", then LLM deltas, then flush "", close ""
+	want := []string{"Hi, I'm AgentSIP. How can I help you today?", "", "", "Hi", " there", "", ""}
 	if len(got) != len(want) {
 		t.Fatalf("tts text log = %v, want %v", got, want)
 	}

@@ -47,15 +47,14 @@ const (
 	audioFormatPCM16 = "pcm_8000" // native 8k PCM, no upsample artifacts
 	// Legacy ulaw format kept for reference
 	audioFormatULaw8 = "ulaw_8000"
-	// Tuned for high-latency VPS (141.11.25.210 -> ElevenLabs 34.8.184.191).
-	// Old values: flush 1280B (80ms), commit 9600B (0.6s) worked local but on VPS
-	// WriteJSON blocks 500ms-1s, so bytesSinceCommit grew 1k/sec not 16k/sec,
-	// caller hung up before commit threshold. New values commit faster and
-	// send smaller chunks to reduce per-write blocking.
-	flushBytes            = 640  // 40ms @8k PCM16 (2 RTP frames)
-	flushInterval         = 100 * time.Millisecond
-	minCommitBytes        = 3200 // 0.2s @8k PCM16, was 9600 (0.6s)
-	manualCommitSilence   = 800 * time.Millisecond
+	// Tuned for high-latency APAC VPS (Indonesia -> ElevenLabs US 34.8.184.191).
+	// US VPS works with 3200B, Indonesia needs even smaller due to 300-500ms RTT.
+	// flush 320B = 20ms (1 RTP frame), commit 640B = 40ms allows quick commit
+	// even when WriteJSON blocks, caller doesn't hang up waiting for commit.
+	flushBytes            = 320  // 20ms @8k PCM16 (1 RTP frame)
+	flushInterval         = 80 * time.Millisecond
+	minCommitBytes        = 640 // 40ms @8k PCM16, was 3200 for US, 9600 originally
+	manualCommitSilence   = 500 * time.Millisecond
 	speechEnergyThreshold = 150
 )
 

@@ -14,6 +14,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/fitraditya/agentsip/internal/pkg/logging"
 	"github.com/fitraditya/agentsip/internal/usecase/conversation"
@@ -25,7 +26,12 @@ type LLM struct {
 }
 
 func New(debug bool) *LLM {
-	return &LLM{httpClient: &http.Client{}, debug: debug}
+	return &LLM{
+		httpClient: &http.Client{
+			Timeout: 60 * time.Second, // total timeout for LLM stream, prevents hanging call forever
+		},
+		debug: debug,
+	}
 }
 
 type chatMessage struct {
@@ -169,10 +175,10 @@ func streamSSE(body io.ReadCloser, out chan<- conversation.LLMDelta, debug bool)
 		}
 	}
 	// Stream ended without a [DONE] sentinel (connection closed early, or a
-	// scanner error — checked here only to satisfy the linter's expectation
-	// that it's consulted; either way we still surface whatever streamed in
-	// rather than silently dropping it) — still emit what was accumulated.
-	_ = scanner.Err()
+	// scanner error). Log error and still emit accumulated tool calls.
+	if err := scanner.Err(); err != nil {
+		logging.For("agentsip", "llm").Warn().Err(err).Msg("llm sse scanner error")
+	}
 	emitToolCalls(out, toolCalls)
 	out <- conversation.LLMDelta{Done: true}
 }

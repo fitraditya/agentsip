@@ -229,6 +229,10 @@ func (s *Service) speakFixedText(ctx context.Context, cfg RunConfig, io AudioIO,
 				case io.Out() <- frame:
 				case <-ctx.Done():
 					return
+				default:
+					// RTP not ready (remote not learned yet) — drop to avoid deadlock.
+					// writeLoop will have pending from earlier, this prevents turn hanging.
+					s.log.Debug().Msg("dropping TTS greeting frame, Out() full")
 				}
 			case <-ctx.Done():
 				return
@@ -337,6 +341,8 @@ func (s *Service) respond(ctx context.Context, cfg RunConfig, io AudioIO, messag
 				case io.Out() <- frame:
 				case <-ctx.Done():
 					return
+				default:
+					s.log.Debug().Msg("dropping TTS response frame, Out() full")
 				}
 			case <-ctx.Done():
 				return

@@ -194,6 +194,15 @@ type Trunk struct {
 	WebhookURL            string
 	WebhookTimeoutSeconds int
 
+	// GreetingText is the opening line spoken when a call is answered.
+	// Empty means skip greeting and go straight to listening (STT).
+	// When non-empty, the engine TTSes this text first, then optionally
+	// waits GreetingDelaySeconds before starting STT.
+	GreetingText string
+	// GreetingDelaySeconds is how many seconds to wait after greeting
+	// finished before starting speech recognition. Default 0.
+	GreetingDelaySeconds int
+
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

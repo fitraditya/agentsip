@@ -44,6 +44,7 @@ func (r *TrunkRepository) Create(ctx context.Context, t *domain.Trunk) error {
 			stt_provider_id, llm_provider_id, tts_provider_id,
 			system_prompt, knowledge_base_ids, max_concurrent_calls,
 			answer_mode, ring_delay_seconds, webhook_url, webhook_timeout_seconds,
+			greeting_text, greeting_delay_seconds,
 			created_at, updated_at
 		) VALUES (
 			$1, $2,
@@ -51,7 +52,8 @@ func (r *TrunkRepository) Create(ctx context.Context, t *domain.Trunk) error {
 			$6, $7, $8,
 			$9, $10, $11,
 			$12, $13, $14, $15,
-			$16, $17
+			$16, $17,
+			$18, $19
 		)`
 	_, err = r.pool.Exec(ctx, q,
 		t.ID, t.Name,
@@ -59,6 +61,7 @@ func (r *TrunkRepository) Create(ctx context.Context, t *domain.Trunk) error {
 		t.STTProviderID, t.LLMProviderID, t.TTSProviderID,
 		t.SystemPrompt, t.KnowledgeBaseIDs, t.MaxConcurrentCalls,
 		t.AnswerMode, t.RingDelaySeconds, t.WebhookURL, t.WebhookTimeoutSeconds,
+		t.GreetingText, t.GreetingDelaySeconds,
 		t.CreatedAt, t.UpdatedAt,
 	)
 	if err != nil {
@@ -116,7 +119,8 @@ func (r *TrunkRepository) Update(ctx context.Context, t *domain.Trunk) error {
 			stt_provider_id = $6, llm_provider_id = $7, tts_provider_id = $8,
 			system_prompt = $9, knowledge_base_ids = $10, max_concurrent_calls = $11,
 			answer_mode = $12, ring_delay_seconds = $13, webhook_url = $14, webhook_timeout_seconds = $15,
-			updated_at = $16
+			greeting_text = $16, greeting_delay_seconds = $17,
+			updated_at = $18
 		WHERE id = $1`
 	tag, err := r.pool.Exec(ctx, q,
 		t.ID, t.Name,
@@ -124,6 +128,7 @@ func (r *TrunkRepository) Update(ctx context.Context, t *domain.Trunk) error {
 		t.STTProviderID, t.LLMProviderID, t.TTSProviderID,
 		t.SystemPrompt, t.KnowledgeBaseIDs, t.MaxConcurrentCalls,
 		t.AnswerMode, t.RingDelaySeconds, t.WebhookURL, t.WebhookTimeoutSeconds,
+		t.GreetingText, t.GreetingDelaySeconds,
 		t.UpdatedAt,
 	)
 	if err != nil {
@@ -179,6 +184,7 @@ const selectTrunkColumns = `
 		t.tts_provider_id, tp.provider, tp.api_key, tp.voice_id, tp.model,
 		t.system_prompt, t.knowledge_base_ids, t.max_concurrent_calls,
 		t.answer_mode, t.ring_delay_seconds, t.webhook_url, t.webhook_timeout_seconds,
+		t.greeting_text, t.greeting_delay_seconds,
 		t.created_at, t.updated_at
 	FROM trunks t
 	JOIN stt_providers sp ON sp.id = t.stt_provider_id
@@ -212,6 +218,7 @@ func (r *TrunkRepository) scanTrunkRow(row rowScanner) (*domain.Trunk, error) {
 		&t.TTSProviderID, &t.TTS.Provider, &encTTSKey, &t.TTS.VoiceID, &t.TTS.Model,
 		&t.SystemPrompt, &t.KnowledgeBaseIDs, &t.MaxConcurrentCalls,
 		&t.AnswerMode, &t.RingDelaySeconds, &t.WebhookURL, &t.WebhookTimeoutSeconds,
+		&t.GreetingText, &t.GreetingDelaySeconds,
 		&t.CreatedAt, &t.UpdatedAt,
 	)
 	if err != nil {

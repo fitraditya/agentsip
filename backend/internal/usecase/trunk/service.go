@@ -143,6 +143,8 @@ func validate(t *domain.Trunk) error {
 		reason = "ring_delay_seconds must not be negative"
 	case t.WebhookTimeoutSeconds < 0:
 		reason = "webhook_timeout_seconds must not be negative"
+	case t.GreetingDelaySeconds < 0:
+		reason = "greeting_delay_seconds must not be negative"
 	case t.AnswerMode != "" && t.AnswerMode != domain.AnswerModeAuto && t.AnswerMode != domain.AnswerModeWebhook:
 		reason = fmt.Sprintf("answer_mode must be %q or %q", domain.AnswerModeAuto, domain.AnswerModeWebhook)
 	case t.AnswerMode == domain.AnswerModeWebhook && t.WebhookURL == "":

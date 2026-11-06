@@ -268,11 +268,13 @@ func (s *Server) handleInvite(req *sip.Request, tx sip.ServerTransaction) {
 	})
 
 	runCfg := conversation.RunConfig{
-		SystemPrompt:     t.SystemPrompt,
-		STT:              conversation.STTSessionConfig{APIKey: t.STT.APIKey, Model: t.STT.Model},
-		TTS:              conversation.TTSSessionConfig{APIKey: t.TTS.APIKey, Model: t.TTS.Model, VoiceID: t.TTS.VoiceID},
-		LLM:              conversation.LLMConfig{BaseURL: t.LLM.BaseURL, APIKey: t.LLM.APIKey, Model: t.LLM.Model},
-		KnowledgeBaseIDs: t.KnowledgeBaseIDs,
+		SystemPrompt:         t.SystemPrompt,
+		STT:                  conversation.STTSessionConfig{APIKey: t.STT.APIKey, Model: t.STT.Model},
+		TTS:                  conversation.TTSSessionConfig{APIKey: t.TTS.APIKey, Model: t.TTS.Model, VoiceID: t.TTS.VoiceID},
+		LLM:                  conversation.LLMConfig{BaseURL: t.LLM.BaseURL, APIKey: t.LLM.APIKey, Model: t.LLM.Model},
+		KnowledgeBaseIDs:     t.KnowledgeBaseIDs,
+		GreetingText:         t.GreetingText,
+		GreetingDelaySeconds: t.GreetingDelaySeconds,
 	}
 	// Started right after the 200 OK, not gated on the ACK: some UACs send
 	// RTP as soon as they receive the final response, before their own ACK

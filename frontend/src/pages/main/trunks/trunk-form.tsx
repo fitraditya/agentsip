@@ -198,6 +198,37 @@ export default function TrunkForm({
           <FieldError errors={[errors.system_prompt]} />
         </Field>
 
+        <Field className="gap-1.5">
+          <FieldLabel>Greeting text</FieldLabel>
+          <Textarea
+            {...register("greeting_text")}
+            rows={2}
+            placeholder="Hi, I'm AgentSIP. How can I help you today? Leave empty to skip greeting"
+            aria-invalid={errors.greeting_text ? "true" : undefined}
+          />
+          <FieldDescription>
+            Opening line spoken when call answered. Empty skips greeting and goes straight to listening.
+          </FieldDescription>
+          <FieldError errors={[errors.greeting_text]} />
+        </Field>
+
+        <Field
+          data-invalid={Boolean(errors.greeting_delay_seconds)}
+          className="gap-1.5 sm:max-w-60"
+        >
+          <FieldLabel>Greeting delay (seconds) before STT</FieldLabel>
+          <Input
+            {...register("greeting_delay_seconds")}
+            type="number"
+            min={0}
+            placeholder="Defaults to 0"
+          />
+          <FieldDescription>
+            Seconds to wait after greeting finished before starting speech recognition. Default 0.
+          </FieldDescription>
+          <FieldError errors={[errors.greeting_delay_seconds]} />
+        </Field>
+
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <Field
             data-invalid={Boolean(errors.max_concurrent_calls)}

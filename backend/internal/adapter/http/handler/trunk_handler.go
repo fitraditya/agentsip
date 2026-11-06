@@ -58,6 +58,9 @@ type trunkRequest struct {
 	RingDelaySeconds      int    `json:"ring_delay_seconds,omitempty"`
 	WebhookURL            string `json:"webhook_url,omitempty"`
 	WebhookTimeoutSeconds int    `json:"webhook_timeout_seconds,omitempty"`
+
+	GreetingText         string `json:"greeting_text,omitempty"`
+	GreetingDelaySeconds int    `json:"greeting_delay_seconds,omitempty"`
 }
 
 // trunkResponse deliberately omits every secret (API keys, digest password):
@@ -110,6 +113,9 @@ type trunkResponse struct {
 	WebhookURL            string `json:"webhook_url,omitempty"`
 	WebhookTimeoutSeconds int    `json:"webhook_timeout_seconds,omitempty"`
 
+	GreetingText         string `json:"greeting_text"`
+	GreetingDelaySeconds int    `json:"greeting_delay_seconds"`
+
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -147,6 +153,8 @@ func toTrunkResponse(t *domain.Trunk) trunkResponse {
 	resp.RingDelaySeconds = t.RingDelaySeconds
 	resp.WebhookURL = t.WebhookURL
 	resp.WebhookTimeoutSeconds = t.WebhookTimeoutSeconds
+	resp.GreetingText = t.GreetingText
+	resp.GreetingDelaySeconds = t.GreetingDelaySeconds
 	resp.CreatedAt = t.CreatedAt
 	resp.UpdatedAt = t.UpdatedAt
 	return resp
@@ -161,16 +169,18 @@ func (req trunkRequest) toDomain(id uuid.UUID) *domain.Trunk {
 			DigestUsername: req.SIPAuth.DigestUsername,
 			DigestPassword: req.SIPAuth.DigestPassword,
 		},
-		STTProviderID:         req.STTProviderID,
-		LLMProviderID:         req.LLMProviderID,
-		TTSProviderID:         req.TTSProviderID,
-		SystemPrompt:          req.SystemPrompt,
-		KnowledgeBaseIDs:      req.KnowledgeBaseIDs,
-		MaxConcurrentCalls:    req.MaxConcurrentCalls,
-		AnswerMode:            domain.AnswerMode(req.AnswerMode),
-		RingDelaySeconds:      req.RingDelaySeconds,
-		WebhookURL:            req.WebhookURL,
+		STTProviderID:        req.STTProviderID,
+		LLMProviderID:        req.LLMProviderID,
+		TTSProviderID:        req.TTSProviderID,
+		SystemPrompt:         req.SystemPrompt,
+		KnowledgeBaseIDs:     req.KnowledgeBaseIDs,
+		MaxConcurrentCalls:   req.MaxConcurrentCalls,
+		AnswerMode:           domain.AnswerMode(req.AnswerMode),
+		RingDelaySeconds:     req.RingDelaySeconds,
+		WebhookURL:           req.WebhookURL,
 		WebhookTimeoutSeconds: req.WebhookTimeoutSeconds,
+		GreetingText:         req.GreetingText,
+		GreetingDelaySeconds: req.GreetingDelaySeconds,
 	}
 }
 

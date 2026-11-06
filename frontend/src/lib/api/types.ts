@@ -127,6 +127,10 @@ export interface TrunkRequest {
   webhook_url?: string;
   /** Only used in "webhook" mode; defaults to 30 server-side. */
   webhook_timeout_seconds?: number;
+  /** Opening greeting text, empty skips greeting. */
+  greeting_text?: string;
+  /** Seconds to wait after greeting before starting STT, default 0. */
+  greeting_delay_seconds?: number;
 }
 
 /** Response shape for create/list/get/update — secrets never come back. */
@@ -148,6 +152,8 @@ export interface Trunk {
   /** Omitted by the backend when empty/zero. */
   webhook_url?: string;
   webhook_timeout_seconds?: number;
+  greeting_text: string;
+  greeting_delay_seconds: number;
   created_at: string;
   updated_at: string;
 }

@@ -274,9 +274,11 @@ func TestCallRoundTrip(t *testing.T) {
 
 	// Direction 1: caller -> STT. A real RTP packet sent to the negotiated
 	// port should have its payload handed to the (fake) STT session.
+	// Payload must be >=40 bytes (session.go drops small CNG packets).
+	testPayload := []byte("user-said-this-160bytes-payload--------------------------------------" + "----------------------------------------------------------------")
 	sent := &rtp.Packet{
 		Header:  rtp.Header{Version: 2, PayloadType: 0, SequenceNumber: 1, Timestamp: 160, SSRC: 0xCAFE},
-		Payload: []byte("user-said-this"),
+		Payload: testPayload,
 	}
 	raw, err := sent.Marshal()
 	if err != nil {
@@ -287,8 +289,8 @@ func TestCallRoundTrip(t *testing.T) {
 	}
 	select {
 	case got := <-stt.audioFrames:
-		if string(got) != "user-said-this" {
-			t.Fatalf("stt received payload %q, want %q", got, "user-said-this")
+		if string(got) != string(testPayload) {
+			t.Fatalf("stt received payload %q, want %q", got, testPayload)
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("stt never received the rtp payload")

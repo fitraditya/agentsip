@@ -80,6 +80,9 @@ func (s *fakeTTSSession) SendText(chunk string, flush bool) error {
 	s.owner.mu.Lock()
 	s.owner.sentText = append(s.owner.sentText, chunk)
 	s.owner.mu.Unlock()
+	if chunk == "" {
+		s.once.Do(func() { close(s.audio) })
+	}
 	return nil
 }
 func (s *fakeTTSSession) Audio() <-chan []byte { return s.audio }
@@ -141,10 +144,15 @@ func TestRun_BasicTurn(t *testing.T) {
 	io := newFakeAudioIO()
 
 	runDone := make(chan error, 1)
-	go func() { runDone <- svc.Run(t.Context(), conversation.RunConfig{SystemPrompt: "be helpful"}, io) }()
+	go func() {
+		runDone <- svc.Run(t.Context(), conversation.RunConfig{
+			SystemPrompt: "be helpful",
+			GreetingText: "Hi, I'm AgentSIP. How can I help you today?",
+		}, io)
+	}()
 
 	// Wait for the greeting turn to finish before sending the scripted
-	// transcript — playGreeting fires on Run, racing with the test otherwise.
+	// transcript — playGreetingBlocking now runs synchronously before STT.
 	deadline := time.After(2 * time.Second)
 	for {
 		found := false

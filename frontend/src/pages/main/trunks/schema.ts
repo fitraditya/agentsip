@@ -35,6 +35,8 @@ export const trunkFormSchema = z
     ring_delay_seconds: z.string().optional(),
     webhook_url: z.string().optional(),
     webhook_timeout_seconds: z.string().optional(),
+    greeting_text: z.string().optional(),
+    greeting_delay_seconds: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     if (data.answer_mode === "webhook" && !data.webhook_url?.trim()) {
@@ -70,6 +72,8 @@ export function emptyTrunkFormDefaults(): TrunkFormData {
     ring_delay_seconds: "",
     webhook_url: "",
     webhook_timeout_seconds: "",
+    greeting_text: "",
+    greeting_delay_seconds: "",
   };
 }
 
@@ -92,6 +96,11 @@ export function trunkToFormDefaults(trunk: Trunk): TrunkFormData {
     webhook_timeout_seconds:
       trunk.webhook_timeout_seconds !== undefined
         ? String(trunk.webhook_timeout_seconds)
+        : "",
+    greeting_text: trunk.greeting_text ?? "",
+    greeting_delay_seconds:
+      trunk.greeting_delay_seconds !== undefined
+        ? String(trunk.greeting_delay_seconds)
         : "",
   };
 }
@@ -139,6 +148,15 @@ export function trunkFormToRequest(data: TrunkFormData): TrunkRequest {
     const timeout = parseIntOrUndefined(data.webhook_timeout_seconds);
     if (timeout !== undefined) req.webhook_timeout_seconds = timeout;
   }
+
+  if (data.greeting_text?.trim()) {
+    req.greeting_text = data.greeting_text.trim();
+  } else if (data.greeting_text === "") {
+    // Explicit empty string clears greeting
+    req.greeting_text = "";
+  }
+  const greetingDelay = parseIntOrUndefined(data.greeting_delay_seconds);
+  if (greetingDelay !== undefined) req.greeting_delay_seconds = greetingDelay;
 
   return req;
 }

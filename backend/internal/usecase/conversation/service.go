@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -27,6 +28,12 @@ type RunConfig struct {
 	TTS              TTSSessionConfig
 	LLM              LLMConfig
 	KnowledgeBaseIDs []uuid.UUID
+	// GreetingText is the opening line spoken when call answered.
+	// Empty skips greeting.
+	GreetingText string
+	// GreetingDelaySeconds waits this many seconds after greeting finished
+	// before starting STT recognition. Default 0.
+	GreetingDelaySeconds int
 }
 
 // Service runs the STT -> LLM(+RAG) -> TTS loop for one call. It knows
@@ -57,19 +64,19 @@ func (s *Service) Run(ctx context.Context, cfg RunConfig, io AudioIO) error {
 
 	state := &turnState{messages: []LLMMessage{{Role: "system", Content: cfg.SystemPrompt}}}
 
-	// Greeting first, blocking, then STT starts — avoids barge-in cutting off
-	// opening (user reported no sound because STT partial during greeting
-	// cancelled it). playGreetingBlocking is synchronous and non-cancellable.
-	if err := s.playGreetingBlocking(ctx, cfg, io, state); err != nil {
-		s.log.Warn().Err(err).Msg("greeting failed")
+	// Pump starts immediately to drain RTP In() and learn remote, but STT
+	// forwarding is gated by greetingDone when greeting is configured.
+	// If no greeting and no delay, STT starts immediately (integration test).
+	greetingDone := make(chan struct{})
+	hasGreeting := cfg.GreetingText != "" || cfg.GreetingDelaySeconds > 0
+	if !hasGreeting {
+		close(greetingDone)
 	}
-
-	// Pump starts only after greeting finished, per user request "start stt
-	// after greeting played".
 	pumpCtx, pumpCancel := context.WithCancel(ctx)
 	defer pumpCancel()
 	go func() {
 		var framesForwarded uint64
+		var framesDroppedDuringGreeting uint64
 		for {
 			select {
 			case frame, ok := <-io.In():
@@ -77,6 +84,20 @@ func (s *Service) Run(ctx context.Context, cfg RunConfig, io AudioIO) error {
 					s.log.Info().Msg("conversation pump: In() channel closed")
 					return
 				}
+				if hasGreeting {
+					// If greeting not done, discard frame (don't send to STT)
+					select {
+					case <-greetingDone:
+						// greeting finished, forward to STT
+					default:
+						framesDroppedDuringGreeting++
+						if framesDroppedDuringGreeting == 1 || framesDroppedDuringGreeting%250 == 0 {
+							s.log.Debug().Int("dropped", int(framesDroppedDuringGreeting)).Msg("dropping audio during greeting")
+						}
+						continue
+					}
+				}
+
 				framesForwarded++
 				if framesForwarded == 1 || framesForwarded%250 == 0 {
 					s.log.Info().Int("frame_bytes", len(frame)).Int("total", int(framesForwarded)).Msg("conversation pump: forwarding audio to STT")
@@ -92,6 +113,25 @@ func (s *Service) Run(ctx context.Context, cfg RunConfig, io AudioIO) error {
 			}
 		}
 	}()
+
+	// Greeting blocking, then optional delay, then close gate to start STT.
+	if err := s.playGreetingBlocking(ctx, cfg, io, state); err != nil {
+		s.log.Warn().Err(err).Msg("greeting failed")
+	}
+
+	if cfg.GreetingDelaySeconds > 0 {
+		s.log.Info().Int("delay_seconds", cfg.GreetingDelaySeconds).Msg("greeting delay before STT")
+		select {
+		case <-time.After(time.Duration(cfg.GreetingDelaySeconds) * time.Second):
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-io.Hangup():
+			return nil
+		}
+	}
+	if hasGreeting {
+		close(greetingDone)
+	}
 
 	for {
 		select {
@@ -129,11 +169,17 @@ func (s *Service) playGreeting(ctx context.Context, cfg RunConfig, io AudioIO, s
 	}()
 }
 
-// playGreetingBlocking speaks fixed opening synchronously, before STT pump
-// starts, so greeting cannot be cut off by barge-in. This ensures caller
-// hears greeting even on high-latency VPS where STT partials would otherwise
-// cancel it immediately.
+// playGreetingBlocking speaks opening synchronously, before STT pump
+// starts, so greeting cannot be cut off by barge-in. If cfg.GreetingText
+// is empty, greeting is skipped entirely (straight to STT).
 func (s *Service) playGreetingBlocking(ctx context.Context, cfg RunConfig, io AudioIO, state *turnState) error {
+	greeting := cfg.GreetingText
+	if greeting == "" {
+		// No greeting configured — skip, goes straight to STT.
+		s.log.Info().Msg("greeting skipped (empty)")
+		return nil
+	}
+
 	state.appendMessage(LLMMessage{Role: "user", Content: "Say the opening greeting for the call."})
 
 	turnCtx, cancel := context.WithCancel(ctx)
@@ -149,8 +195,12 @@ func (s *Service) playGreetingBlocking(ctx context.Context, cfg RunConfig, io Au
 		state.mu.Unlock()
 	}()
 
-	// Fixed text, not LLM-generated — direct TTS so greeting works even if LLM down.
-	if err := s.speakFixedText(turnCtx, cfg, io, "Hi, I'm AgentSIP. How can I help you today?"); err != nil {
+	// Use trunk's configured greeting, fallback to default if it somehow got empty after trim.
+	text := greeting
+	if text == "" {
+		text = "Hi, I'm AgentSIP. How can I help you today?"
+	}
+	if err := s.speakFixedText(turnCtx, cfg, io, text); err != nil {
 		if turnCtx.Err() == nil {
 			s.log.Warn().Err(err).Msg("greeting failed")
 		}

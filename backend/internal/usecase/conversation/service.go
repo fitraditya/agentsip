@@ -143,8 +143,16 @@ func (s *Service) Run(ctx context.Context, cfg RunConfig, io AudioIO) error {
 			return nil
 		case ev, ok := <-sttSess.Events():
 			if !ok {
-				state.cancelActive()
-				return fmt.Errorf("conversation: stt session ended")
+				// STT session ended (e.g., after final commit). Don't cancel active turn
+				// that was just started from last transcript — let it finish speaking.
+				s.log.Info().Msg("stt session ended, waiting for active turn to finish")
+				state.mu.Lock()
+				done := state.done
+				state.mu.Unlock()
+				if done != nil {
+					<-done
+				}
+				return nil
 			}
 			if strings.TrimSpace(ev.Text) == "" {
 				continue

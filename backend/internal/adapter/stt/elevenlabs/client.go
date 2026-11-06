@@ -454,7 +454,8 @@ func (s *session) Close() error {
 			logging.For("agentsip", "stt").Info().Int("bytes", bytesSince+len(leftover)).Msg("final commit on close")
 		}
 		_ = s.sendCommit()
-		time.Sleep(500 * time.Millisecond)
+		// Wait for committed_transcript to arrive; high-latency APAC needs more than 500ms
+		time.Sleep(1500 * time.Millisecond)
 	}
 
 	if s.dumpFile != nil {

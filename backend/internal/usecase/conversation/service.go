@@ -55,6 +55,17 @@ func (s *Service) Run(ctx context.Context, cfg RunConfig, io AudioIO) error {
 	}
 	defer sttSess.Close()
 
+	state := &turnState{messages: []LLMMessage{{Role: "system", Content: cfg.SystemPrompt}}}
+
+	// Greeting first, blocking, then STT starts — avoids barge-in cutting off
+	// opening (user reported no sound because STT partial during greeting
+	// cancelled it). playGreetingBlocking is synchronous and non-cancellable.
+	if err := s.playGreetingBlocking(ctx, cfg, io, state); err != nil {
+		s.log.Warn().Err(err).Msg("greeting failed")
+	}
+
+	// Pump starts only after greeting finished, per user request "start stt
+	// after greeting played".
 	pumpCtx, pumpCancel := context.WithCancel(ctx)
 	defer pumpCancel()
 	go func() {
@@ -81,12 +92,6 @@ func (s *Service) Run(ctx context.Context, cfg RunConfig, io AudioIO) error {
 			}
 		}
 	}()
-
-	state := &turnState{messages: []LLMMessage{{Role: "system", Content: cfg.SystemPrompt}}}
-
-	// Hardcoded greeting — plays once the call is answered, before the caller
-	// says anything. Long-term this should be configurable per-trunk.
-	go s.playGreeting(ctx, cfg, io, state)
 
 	for {
 		select {
@@ -116,13 +121,19 @@ func (s *Service) Run(ctx context.Context, cfg RunConfig, io AudioIO) error {
 	}
 }
 
-// playGreeting speaks a fixed opening before the caller's first utterance,
-// so the caller hears something the moment the call is answered rather than
-// silence. Runs as a normal turn (system-prompted LLM) but with a fixed
-// instruction instead of the caller's transcript — the same LLM→TTS path as
-// any other turn, just triggered at answer time rather than on a final STT
-// event.
+// playGreeting is legacy async version, kept for reference. New flow uses
+// playGreetingBlocking which plays greeting synchronously before STT starts.
 func (s *Service) playGreeting(ctx context.Context, cfg RunConfig, io AudioIO, state *turnState) {
+	go func() {
+		_ = s.playGreetingBlocking(ctx, cfg, io, state)
+	}()
+}
+
+// playGreetingBlocking speaks fixed opening synchronously, before STT pump
+// starts, so greeting cannot be cut off by barge-in. This ensures caller
+// hears greeting even on high-latency VPS where STT partials would otherwise
+// cancel it immediately.
+func (s *Service) playGreetingBlocking(ctx context.Context, cfg RunConfig, io AudioIO, state *turnState) error {
 	state.appendMessage(LLMMessage{Role: "user", Content: "Say the opening greeting for the call."})
 
 	turnCtx, cancel := context.WithCancel(ctx)
@@ -131,25 +142,21 @@ func (s *Service) playGreeting(ctx context.Context, cfg RunConfig, io AudioIO, s
 	state.cancel, state.done = cancel, done
 	state.mu.Unlock()
 
-	go func() {
-		defer close(done)
-		defer func() {
-			state.mu.Lock()
-			state.cancel, state.done = nil, nil
-			state.mu.Unlock()
-		}()
-
-		// The greeting itself is fixed text, not LLM-generated — synthesize it
-		// directly so we never depend on the LLM for the opening. The turn
-		// bookkeeping above reuses the same cancellation handle as startTurn
-		// so a barge-in during the greeting cancels it identically.
-		if err := s.speakFixedText(turnCtx, cfg, io, "Hi, I'm AgentSIP. How can I help you today?"); err != nil {
-			if turnCtx.Err() == nil {
-				s.log.Warn().Err(err).Msg("greeting failed")
-			}
-			return
-		}
+	defer func() {
+		close(done)
+		state.mu.Lock()
+		state.cancel, state.done = nil, nil
+		state.mu.Unlock()
 	}()
+
+	// Fixed text, not LLM-generated — direct TTS so greeting works even if LLM down.
+	if err := s.speakFixedText(turnCtx, cfg, io, "Hi, I'm AgentSIP. How can I help you today?"); err != nil {
+		if turnCtx.Err() == nil {
+			s.log.Warn().Err(err).Msg("greeting failed")
+		}
+		return err
+	}
+	return nil
 }
 
 func (s *Service) speakFixedText(ctx context.Context, cfg RunConfig, io AudioIO, text string) error {

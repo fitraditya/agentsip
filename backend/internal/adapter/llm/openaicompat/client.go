@@ -12,10 +12,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"strings"
 
+	"github.com/fitraditya/agentsip/internal/pkg/logging"
 	"github.com/fitraditya/agentsip/internal/usecase/conversation"
 )
 
@@ -152,7 +152,7 @@ func streamSSE(body io.ReadCloser, out chan<- conversation.LLMDelta, debug bool)
 		delta := chunk.Choices[0].Delta
 		if delta.Content != "" {
 			if debug {
-				slog.Info("LLM openaicompat delta", "content", delta.Content)
+				logging.For("agentsip", "llm").Debug().Str("content", delta.Content).Msg("delta")
 			}
 			out <- conversation.LLMDelta{ContentDelta: delta.Content}
 		}

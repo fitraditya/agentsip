@@ -25,13 +25,14 @@ package elevenlabs
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"net/url"
 
 	"github.com/gorilla/websocket"
 
+	"github.com/fitraditya/agentsip/internal/pkg/logging"
 	"github.com/fitraditya/agentsip/internal/usecase/conversation"
 )
 
@@ -66,7 +67,7 @@ func linearToUlaw(pcm int16) byte {
 	// find exponent
 	exp := 7
 	for exp > 0 {
-		if pcm >= (1 << (exp + 3)) {
+		if pcm >= (1<<(exp+3)) {
 			break
 		}
 		exp--
@@ -103,9 +104,9 @@ func (t *TTS) StartSession(ctx context.Context, cfg conversation.TTSSessionConfi
 
 	q := url.Values{}
 	q.Set("model_id", model)
-	// Try pcm_8000 first, fallback to ulaw_8000 if server returns empty.
-	// pcm_8000 is natively 8k 16-bit, we transcode to ulaw for RTP.
-	q.Set("output_format", audioFormatPCM8000)
+	// ulaw_8000 is native telephony, lowest latency, no transcode.
+	// Previous pcm_8000 returned empty audio for short greeting due to chunk_length_schedule default 120.
+	q.Set("output_format", audioFormatULaw8000)
 
 	wsURL := fmt.Sprintf(wsURLFmt, url.PathEscape(cfg.VoiceID)) + "?" + q.Encode()
 	header := http.Header{"xi-api-key": []string{cfg.APIKey}}
@@ -114,13 +115,17 @@ func (t *TTS) StartSession(ctx context.Context, cfg conversation.TTSSessionConfi
 		return nil, fmt.Errorf("elevenlabs tts: dial: %w", err)
 	}
 
-	init := textMessage{Text: " ", VoiceSettings: &voiceSettings{Stability: 0.5, SimilarityBoost: 0.8}}
+	init := textMessage{
+		Text: " ",
+		VoiceSettings: &voiceSettings{Stability: 0.5, SimilarityBoost: 0.8},
+		GenerationConfig: &generationConfig{ChunkLengthSchedule: []int{50, 80, 120, 160}},
+	}
 	if err := conn.WriteJSON(init); err != nil {
 		_ = conn.Close()
 		return nil, fmt.Errorf("elevenlabs tts: send init message: %w", err)
 	}
 
-	sess := &session{conn: conn, audio: make(chan []byte, 16), debug: t.debug}
+	sess := &session{conn: conn, audio: make(chan []byte, 32), debug: t.debug, isUlaw: true}
 	go sess.readLoop()
 	return sess, nil
 }
@@ -130,10 +135,15 @@ type voiceSettings struct {
 	SimilarityBoost float64 `json:"similarity_boost"`
 }
 
+type generationConfig struct {
+	ChunkLengthSchedule []int `json:"chunk_length_schedule,omitempty"`
+}
+
 type textMessage struct {
-	Text          string         `json:"text"`
-	Flush         bool           `json:"flush,omitempty"`
-	VoiceSettings *voiceSettings `json:"voice_settings,omitempty"`
+	Text             string            `json:"text"`
+	Flush            bool              `json:"flush,omitempty"`
+	VoiceSettings    *voiceSettings    `json:"voice_settings,omitempty"`
+	GenerationConfig *generationConfig `json:"generation_config,omitempty"`
 }
 
 type audioMessage struct {
@@ -142,12 +152,18 @@ type audioMessage struct {
 }
 
 type session struct {
-	conn  *websocket.Conn
-	audio chan []byte
-	debug bool
+	conn   *websocket.Conn
+	audio  chan []byte
+	debug  bool
+	isUlaw bool
 }
 
 func (s *session) SendText(chunk string, flush bool) error {
+	if chunk != "" && !flush {
+		if chunk[len(chunk)-1] != ' ' {
+			chunk = chunk + " "
+		}
+	}
 	return s.conn.WriteJSON(textMessage{Text: chunk, Flush: flush})
 }
 
@@ -171,22 +187,57 @@ func (s *session) Close() error {
 func (s *session) readLoop() {
 	defer close(s.audio)
 	for {
-		var msg audioMessage
-		if err := s.conn.ReadJSON(&msg); err != nil {
+		_, rawBytes, err := s.conn.ReadMessage()
+		if err != nil {
+			if s.debug {
+				logging.For("agentsip", "tts").Info().Err(err).Msg("read error")
+			}
 			return
 		}
-		if s.debug {
-			slog.Info("TTS elevenlabs audio received", "isFinal", msg.IsFinal, "hasAudio", msg.Audio != "", "audioLen", len(msg.Audio))
+		var msg audioMessage
+		if err := json.Unmarshal(rawBytes, &msg); err != nil {
+			if s.debug {
+				trunc := string(rawBytes)
+				if len(trunc) > 200 {
+					trunc = trunc[:200]
+				}
+				logging.For("agentsip", "tts").Warn().Err(err).Str("raw", trunc).Msg("unmarshal error")
+			}
+			// try generic error check
+			var errMap map[string]any
+			if json.Unmarshal(rawBytes, &errMap) == nil {
+				if s.debug {
+					trunc := fmt.Sprintf("%v", errMap)
+					if len(trunc) > 200 {
+						trunc = trunc[:200]
+					}
+					logging.For("agentsip", "tts").Debug().Str("map", trunc).Msg("generic message")
+				}
+			}
+			continue
 		}
+		logging.For("agentsip", "tts").Info().Bool("isFinal", msg.IsFinal).Bool("hasAudio", msg.Audio != "").Int("audioLen", len(msg.Audio)).Msg("audio received")
 		if msg.Audio != "" {
 			raw, err := base64.StdEncoding.DecodeString(msg.Audio)
-			if err == nil {
-				// raw is PCM16 8k mono, transcode to ulaw for RTP
-				ulaw := pcm16ToUlaw(raw)
+			if err != nil {
+				logging.For("agentsip", "tts").Error().Err(err).Msg("base64 decode error")
+				continue
+			}
+			var ulaw []byte
+			if s.isUlaw {
+				ulaw = raw
+			} else {
+				ulaw = pcm16ToUlaw(raw)
 				if s.debug {
-					slog.Info("TTS elevenlabs transcoded", "pcmBytes", len(raw), "ulawBytes", len(ulaw))
+					logging.For("agentsip", "tts").Debug().Int("pcmBytes", len(raw)).Int("ulawBytes", len(ulaw)).Msg("transcoded")
 				}
-				s.audio <- ulaw
+			}
+			select {
+			case s.audio <- ulaw:
+			default:
+				if s.debug {
+					logging.For("agentsip", "tts").Debug().Msg("dropping audio frame, channel full")
+				}
 			}
 		}
 		if msg.IsFinal {

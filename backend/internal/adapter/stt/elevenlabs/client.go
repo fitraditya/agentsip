@@ -26,7 +26,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -37,6 +36,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 
+	"github.com/fitraditya/agentsip/internal/pkg/logging"
 	"github.com/fitraditya/agentsip/internal/usecase/conversation"
 )
 
@@ -47,12 +47,15 @@ const (
 	audioFormatPCM16 = "pcm_8000" // native 8k PCM, no upsample artifacts
 	// Legacy ulaw format kept for reference
 	audioFormatULaw8 = "ulaw_8000"
-	// Use 80ms flush (1280B) for liveness, commit after 0.6s (9600B) for more context.
-	// Short words like "check" need at least 0.3s, longer phrases like "good morning" need 0.6-1s.
-	flushBytes            = 1280
-	flushInterval         = 200 * time.Millisecond
-	minCommitBytes        = 9600 // 0.6s @8k PCM16, more context for accuracy
-	manualCommitSilence   = 1000 * time.Millisecond
+	// Tuned for high-latency VPS (141.11.25.210 -> ElevenLabs 34.8.184.191).
+	// Old values: flush 1280B (80ms), commit 9600B (0.6s) worked local but on VPS
+	// WriteJSON blocks 500ms-1s, so bytesSinceCommit grew 1k/sec not 16k/sec,
+	// caller hung up before commit threshold. New values commit faster and
+	// send smaller chunks to reduce per-write blocking.
+	flushBytes            = 640  // 40ms @8k PCM16 (2 RTP frames)
+	flushInterval         = 100 * time.Millisecond
+	minCommitBytes        = 3200 // 0.2s @8k PCM16, was 9600 (0.6s)
+	manualCommitSilence   = 800 * time.Millisecond
 	speechEnergyThreshold = 150
 )
 
@@ -181,7 +184,7 @@ func (s *STT) StartSession(ctx context.Context, cfg conversation.STTSessionConfi
 		fname := filepath.Join(os.TempDir(), fmt.Sprintf("stt_%s_%d.pcm", uuid.New().String()[:8], time.Now().Unix()))
 		if f, err := os.Create(fname); err == nil {
 			sess.dumpFile = f
-			slog.Info("STT elevenlabs dump file", "path", fname, "format", "pcm_s16le_8000_mono")
+			logging.For("agentsip", "stt").Info().Str("path", fname).Str("format", "pcm_s16le_8000_mono").Msg("dump file")
 		}
 	}
 	go sess.readLoop()
@@ -232,12 +235,20 @@ func (s *session) sendChunk(b []byte) error {
 		return nil
 	}
 	if s.debug {
-		slog.Info("STT elevenlabs sendChunk", "bytes", len(b))
+		logging.For("agentsip", "stt").Debug().Int("bytes", len(b)).Msg("sendChunk")
 	}
 	// dump to file for offline analysis
 	if s.dumpFile != nil {
 		_, _ = s.dumpFile.Write(b)
 	}
+	// Count bytes optimistically before network block — on VPS link to
+	// 34.8.184.191 latency is 500ms+, old code only counted after WriteJSON
+	// success, so bytesSinceCommit grew 1k/sec not 16k/sec and caller hung
+	// up before minCommitBytes reached.
+	s.bufMu.Lock()
+	s.bytesSinceCommit += len(b)
+	s.bufMu.Unlock()
+
 	s.connMu.Lock()
 	defer s.connMu.Unlock()
 	err := s.conn.WriteJSON(inputAudioChunk{
@@ -246,9 +257,13 @@ func (s *session) sendChunk(b []byte) error {
 		Commit:      false,
 		SampleRate:  sampleRateHz,
 	})
-	if err == nil {
+	if err != nil {
+		// rollback on failure
 		s.bufMu.Lock()
-		s.bytesSinceCommit += len(b)
+		s.bytesSinceCommit -= len(b)
+		if s.bytesSinceCommit < 0 {
+			s.bytesSinceCommit = 0
+		}
 		s.bufMu.Unlock()
 	}
 	return err
@@ -258,7 +273,7 @@ func (s *session) sendCommit() error {
 	s.bufMu.Lock()
 	if s.bytesSinceCommit < minCommitBytes {
 		if s.debug {
-			slog.Info("STT elevenlabs commit skipped, not enough audio", "bytes", s.bytesSinceCommit, "need", minCommitBytes)
+			logging.For("agentsip", "stt").Debug().Int("bytes", s.bytesSinceCommit).Int("need", minCommitBytes).Msg("commit skipped, not enough audio")
 		}
 		s.bufMu.Unlock()
 		return nil
@@ -266,7 +281,7 @@ func (s *session) sendCommit() error {
 	s.bufMu.Unlock()
 
 	if s.debug {
-		slog.Info("STT elevenlabs sendCommit manual", "bytesSinceCommit", s.bytesSinceCommit)
+		logging.For("agentsip", "stt").Debug().Int("bytesSinceCommit", s.bytesSinceCommit).Msg("sendCommit manual")
 	}
 	s.connMu.Lock()
 	defer s.connMu.Unlock()
@@ -304,14 +319,8 @@ func (s *session) SendAudio(frame []byte) error {
 		toSend = append([]byte(nil), s.buf...)
 		s.buf = s.buf[:0]
 	}
-	bufLen := len(s.buf)
 	s.bufMu.Unlock()
 
-	if s.debug && len(frame) > 0 {
-		if bufLen < 7000 || bufLen%32000 == 0 {
-			slog.Info("STT elevenlabs buffered", "ulaw_in", len(frame), "pcm_out", len(pcm), "energy", energy, "buffered", bufLen, "flushing", shouldFlush)
-		}
-	}
 	if shouldFlush {
 		return s.sendChunk(toSend)
 	}
@@ -335,12 +344,9 @@ func (s *session) flushLoop() {
 		s.bufMu.Unlock()
 
 		if hasBuf {
-			if s.debug {
-				slog.Info("STT elevenlabs flushLoop sending", "bytes", len(toSend))
-			}
 			if err := s.sendChunk(toSend); err != nil {
 				if s.debug {
-					slog.Info("STT elevenlabs flushLoop send error", "err", err)
+					logging.For("agentsip", "stt").Debug().Err(err).Msg("flushLoop send error")
 				}
 				return
 			}
@@ -354,11 +360,11 @@ func (s *session) flushLoop() {
 				s.lastHighEnergy = time.Time{}
 				s.bufMu.Unlock()
 				if s.debug {
-					slog.Info("STT elevenlabs commit after silence", "bytesSinceCommit", bytesSinceCommit)
+					logging.For("agentsip", "stt").Debug().Int("bytesSinceCommit", bytesSinceCommit).Msg("commit after silence")
 				}
 				_ = s.sendCommit()
 			} else if s.debug {
-				slog.Info("STT elevenlabs commit delayed, not enough audio", "bytesSinceCommit", bytesSinceCommit)
+				logging.For("agentsip", "stt").Debug().Int("bytesSinceCommit", bytesSinceCommit).Msg("commit delayed, not enough audio")
 			}
 		}
 	}
@@ -384,7 +390,7 @@ func (s *session) Close() error {
 	// even if silence threshold not yet reached. Only if we saw speech.
 	if hasSpeech && bytesSince+len(leftover) >= minCommitBytes {
 		if s.debug {
-			slog.Info("STT elevenlabs final commit on close", "bytes", bytesSince+len(leftover))
+			logging.For("agentsip", "stt").Info().Int("bytes", bytesSince+len(leftover)).Msg("final commit on close")
 		}
 		_ = s.sendCommit()
 		time.Sleep(500 * time.Millisecond)
@@ -393,7 +399,7 @@ func (s *session) Close() error {
 	if s.dumpFile != nil {
 		_ = s.dumpFile.Close()
 		if s.debug {
-			slog.Info("STT elevenlabs dump closed", "path", s.dumpFile.Name())
+			logging.For("agentsip", "stt").Info().Str("path", s.dumpFile.Name()).Msg("dump closed")
 		}
 	}
 
@@ -409,46 +415,55 @@ func (s *session) readLoop() {
 		_, raw, err := s.conn.ReadMessage()
 		if err != nil {
 			if s.debug {
-				slog.Info("STT elevenlabs read error, closing", "err", err)
+				logging.For("agentsip", "stt").Info().Err(err).Msg("read error, closing")
 			}
 			return
 		}
 		var msg rawServerMessage
 		if err := json.Unmarshal(raw, &msg); err != nil {
 			if s.debug {
-				slog.Info("STT elevenlabs unmarshal fail", "raw", string(raw), "err", err)
+				trunc := string(raw)
+				if len(trunc) > 200 {
+					trunc = trunc[:200]
+				}
+				logging.For("agentsip", "stt").Debug().Str("raw", trunc).Err(err).Msg("unmarshal fail")
 			}
 			continue
-		}
-		if s.debug {
-			// log full raw for unknown types
-			if msg.MessageType != "partial_transcript" && msg.MessageType != "committed_transcript" {
-				slog.Info("STT elevenlabs event", "type", msg.MessageType, "text", msg.Text, "raw", string(raw))
-			} else {
-				slog.Info("STT elevenlabs event", "type", msg.MessageType, "text", msg.Text)
-			}
 		}
 		switch msg.MessageType {
 		case "partial_transcript":
-			// keepalive empty partials (text=="") filtered upstream, but keep here
+			if s.debug {
+				logging.For("agentsip", "stt").Debug().Str("type", msg.MessageType).Str("text", msg.Text).Msg("event")
+			}
 			s.events <- conversation.TranscriptEvent{Text: msg.Text, Final: false}
 		case "committed_transcript":
+			logging.For("agentsip", "stt").Info().Str("type", msg.MessageType).Str("text", msg.Text).Msg("committed_transcript")
 			s.events <- conversation.TranscriptEvent{Text: msg.Text, Final: true}
 		case "committed_transcript_with_timestamps":
-			// only arrives if include_timestamps=true, currently not set.
-			// Emit as final transcript as well for robustness.
 			if msg.Text != "" {
+				logging.For("agentsip", "stt").Info().Str("type", msg.MessageType).Str("text", msg.Text).Msg("committed_transcript_with_timestamps")
 				s.events <- conversation.TranscriptEvent{Text: msg.Text, Final: true}
 			}
 		case "session_started":
-			// handshake, ignore
+			logging.For("agentsip", "stt").Info().Str("type", msg.MessageType).Str("text", msg.Text).Msg("session_started")
 			continue
 		case "input_error", "transcriber_error", "auth_error", "quota_exceeded", "invalid_request", "error", "rate_limited", "queue_overflow", "resource_exhausted", "chunk_size_exceeded", "commit_throttled", "insufficient_audio_activity":
-			slog.Error("STT elevenlabs server error", "type", msg.MessageType, "error_type", msg.ErrorType, "msg", msg.Message, "raw", string(raw))
-			// don't close immediately, let server close, but log
+			func() {
+				trunc := string(raw)
+				if len(trunc) > 500 {
+					trunc = trunc[:500]
+				}
+				logging.For("agentsip", "stt").Error().Str("type", msg.MessageType).Str("error_type", msg.ErrorType).Str("msg", msg.Message).Str("raw", trunc).Msg("server error")
+			}()
 			continue
 		default:
-			// unknown future type
+			if s.debug {
+				trunc := string(raw)
+				if len(trunc) > 200 {
+					trunc = trunc[:200]
+				}
+				logging.For("agentsip", "stt").Debug().Str("type", msg.MessageType).Str("text", msg.Text).Str("raw", trunc).Msg("unknown event")
+			}
 			continue
 		}
 	}

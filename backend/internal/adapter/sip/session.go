@@ -55,8 +55,8 @@ func newRTPAudioIO(conn *net.UDPConn, log logging.Logger) *rtpAudioIO {
 	a := &rtpAudioIO{
 		conn:   conn,
 		log:    log,
-		in:     make(chan []byte, 32),
-		out:    make(chan []byte, 32),
+		in:     make(chan []byte, 128),
+		out:    make(chan []byte, 128),
 		hangup: make(chan struct{}),
 	}
 	go a.readLoop()
